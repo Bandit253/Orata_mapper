@@ -16,3 +16,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  test-db:
+    image: postgis/postgis:15-3.3
+    container_name: postgis_test_db
+    environment:
+      POSTGRES_DB: postgis_test_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./db-test-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

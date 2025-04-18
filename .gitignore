@@ -82,3 +82,4 @@ node_modules/
 
 # Ignore local dev/test files
 local_settings.py
+db-test-data/*

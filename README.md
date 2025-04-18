@@ -1,5 +1,8 @@
 # PostGIS REST API Backend
 
+[![CI](https://github.com/Bandit253/Orata_mapper/actions/workflows/ci.yml/badge.svg)](https://github.com/Bandit253/Orata_mapper/actions/workflows/ci.yml)
+[![Coverage Status](https://coveralls.io/repos/github/Bandit253/Orata_mapper/badge.svg?branch=main)](https://coveralls.io/github/Bandit253/Orata_mapper?branch=main)
+
 A FastAPI-based RESTful backend for managing spatial and a-spatial data with PostgreSQL/PostGIS. Supports full CRUD for all geometry types, geospatial queries, and robust authentication.
 
 See `PLANNING.md` for architecture and `TASKS.md` for progress.
