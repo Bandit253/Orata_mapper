@@ -1,0 +1,84 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+.env/
+.env*/
+.venv/
+.venv*/
+ENV/
+env/
+venv/
+
+# VSCode and IDEs
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test & coverage
+.coverage
+.tox/
+.nox/
+.pytest_cache/
+htmlcov/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+
+# Database
+/db-data/
+*.sqlite3
+*.db
+
+# Alembic
+alembic/versions/
+
+# Docker
+*.pid
+*.log
+docker-compose.override.yml
+
+# dotenv
+.env
+.env.*
+
+# Misc
+*.log
+*.pot
+*.mo
+*.swp
+*.bak
+*.tmp
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# Node
+node_modules/
+
+# Sentry
+.sentryclirc
+
+# Windsurf/Netlify
+.windsurfrules
+
+# Ignore local dev/test files
+local_settings.py
