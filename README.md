@@ -13,6 +13,7 @@ See `PLANNING.md` for architecture and `TASKS.md` for progress.
 - Docker & Docker Compose
 - Python 3.10+
 
+
 ## Quick Start
 
 ### 1. Clone and set up virtual environment
