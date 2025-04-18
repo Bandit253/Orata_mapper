@@ -86,9 +86,21 @@ POST /features/my_table/
 Invalid geometries will be rejected with a 422 error.
 
 ### 6. Run Tests
+
+To run tests locally:
 ```sh
 pytest
 ```
+- Tests are isolated and use a dedicated test database (see `.env.example`).
+- CI runs all tests with coverage reporting and enforces clean DB state for every run.
+
+#### Coverage
+- Coverage is automatically reported in CI and visible via the badge above.
+
+#### Secret Management
+- All secrets (DB URLs, credentials, tokens) must be set via environment variables or `.env` (never committed).
+- See `.env.example` for required variables.
+- In CI, all secrets are injected via GitHub Actions Secrets.
 
 ---
 

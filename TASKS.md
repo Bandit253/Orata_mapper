@@ -76,10 +76,11 @@ TASKS.md
     - [x] Schemas
     - [x] CRUD operations
     - [x] API routes (including spatial queries for Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon)
-- [ ] Use test database with rollback strategy
+- [x] Use test database with rollback strategy
 
 ---
 ### Discovered During Work
+- [x] [2025-04-19] Implemented secret management: all hardcoded credentials removed, secrets injected via env or GitHub Secrets. Added .env.example and updated README for onboarding and security best practices.
 - [x] Ensure CRUD and API tests cover Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon.
 - [x] Add negative tests for invalid geometry input for all types.
 - [ ] Add tests and support for GeometryCollection (if needed).
