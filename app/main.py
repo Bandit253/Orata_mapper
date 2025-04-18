@@ -1,5 +1,5 @@
 """
-FastAPI entrypoint for PostGIS REST API Backend.
+FastAPI entrypoint for Orata API Backend.
 """
 from fastapi import FastAPI
 from app.api import spatial
@@ -7,7 +7,7 @@ from app.api import spatial_table
 from app.api import spatial_query
 
 app = FastAPI(
-    title="PostGIS REST API Backend",
+    title="Orata API Backend",
     description="A RESTful API for spatial and a-spatial data management.",
     version="0.1.0"
 )

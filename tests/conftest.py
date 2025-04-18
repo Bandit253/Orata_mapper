@@ -7,10 +7,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 # Use a separate test database
-TEST_DATABASE_URL = os.getenv(
-    "TEST_DATABASE_URL",
-    "postgresql+psycopg2://postgres:postgres@localhost:5433/postgis_db"
-)
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")  # Must be set in environment or .env (never committed)
 
 # Create a new engine and session for testing
 engine = create_engine(TEST_DATABASE_URL, echo=False)

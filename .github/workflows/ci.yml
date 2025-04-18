@@ -14,8 +14,8 @@ jobs:
         image: postgis/postgis:15-3.3
         env:
           POSTGRES_DB: postgis_db
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         ports:
           - 5433:5432
         options: >-
@@ -24,15 +24,17 @@ jobs:
         image: postgis/postgis:15-3.3
         env:
           POSTGRES_DB: postgis_test_db
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         ports:
           - 5434:5432
         options: >-
           --health-cmd="pg_isready -U postgres" --health-interval=10s --health-timeout=5s --health-retries=5
     env:
-      DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5433/postgis_db
-      TEST_DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5434/postgis_test_db
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
