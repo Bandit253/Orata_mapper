@@ -1,3 +1,0 @@
-Alembic migrations directory for PostGIS REST API Backend.
-- env.py: Alembic environment setup
-- Versions: migration scripts will be placed here
