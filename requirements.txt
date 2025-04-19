@@ -9,3 +9,6 @@ shapely
 pytest
 httpx
 alembic
+python-multipart
+geopandas
+fiona

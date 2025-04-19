@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import List
-from app.db.session import SessionLocal
+from app.db.session import SessionLocal, engine
 from app.schemas.spatial import SpatialOut
 from app.api.spatial import serialize_spatial_feature
 from geoalchemy2.shape import to_shape
@@ -13,29 +13,43 @@ from shapely.geometry import mapping
 
 # Patch: handle SQLAlchemy Row objects from raw SQL
 
+def tuples_to_lists(obj):
+    if isinstance(obj, tuple):
+        return [tuples_to_lists(item) for item in obj]
+    elif isinstance(obj, list):
+        return [tuples_to_lists(item) for item in obj]
+    else:
+        return obj
+
 def serialize_spatial_row(row):
     """
-    Convert a SQLAlchemy Row/tuple/ORM object to a dict compatible with SpatialOut schema.
-    Handles ORM, Row, RowMapping, and tuple results from raw SQL.
+    Convert a SQLAlchemy Row/tuple/ORM object to a GeoJSON Feature dictionary.
+    Handles ORM, Row, RowMapping results.
     Robustly serializes PostGIS geometry columns.
+    Assumes 'id' and 'geometry' columns are present.
+    Optional 'name' and 'description' columns are handled safely.
     """
     from geoalchemy2.elements import WKBElement, WKTElement
     from shapely.geometry.base import BaseGeometry
     from shapely import wkb
-    from app.api.spatial import tuples_to_lists
 
-    # Handle tuple result (raw SQL) by index
-    if isinstance(row, tuple):
-        # Assume column order: id, created_at, updated_at, name, description, geometry
-        id_, _, _, name, description, geometry_col = row
-    else:
-        db_obj = row
-        if hasattr(row, "_mapping"):
-            db_obj = row._mapping
-        id_ = db_obj["id"] if isinstance(db_obj, dict) else db_obj.id
-        name = db_obj["name"] if isinstance(db_obj, dict) else db_obj.name
-        description = db_obj.get("description") if isinstance(db_obj, dict) else db_obj.description
-        geometry_col = db_obj["geometry"] if isinstance(db_obj, dict) else db_obj.geometry
+    # Use row._mapping for consistent access (works for ORM, Row, etc.)
+    data = row._mapping if hasattr(row, '_mapping') else row # Handle potential plain dicts too
+
+    # ID is assumed to exist after the import fix
+    id_ = data.get('id')
+    if id_ is None:
+        # This shouldn't happen if the import worked, but good to check
+        raise ValueError("Row is missing the mandatory 'id' column.")
+
+    # Geometry is also mandatory
+    geometry_col = data.get('geometry')
+    if geometry_col is None:
+         raise ValueError("Row is missing the mandatory 'geometry' column.")
+
+    # Get optional fields safely
+    name = data.get('name') # Defaults to None if missing
+    description = data.get('description') # Defaults to None if missing
 
     # Now decode geometry_col robustly
     if isinstance(geometry_col, (WKBElement, WKTElement)):
@@ -45,21 +59,39 @@ def serialize_spatial_row(row):
     elif isinstance(geometry_col, (bytes, str)):
         # Raw WKB hex or bytes from DB
         if isinstance(geometry_col, str):
-            geom = mapping(wkb.loads(bytes.fromhex(geometry_col)))
+            # Assuming hex WKB representation if it's a string
+            try:
+                geom = mapping(wkb.loads(bytes.fromhex(geometry_col)))
+            except (ValueError, TypeError): # Handle non-hex strings or bad WKB
+                 raise ValueError(f"Cannot deserialize geometry from string: {geometry_col[:50]}...") # Show snippet
         else:
-            geom = mapping(wkb.loads(geometry_col))
+             # Assuming raw WKB bytes
+            try:
+                geom = mapping(wkb.loads(geometry_col))
+            except (ValueError, TypeError): # Handle bad WKB
+                 raise ValueError("Cannot deserialize geometry from bytes.")
     else:
         # Fallback: try to convert with to_shape, else raise
         try:
             geom = mapping(to_shape(geometry_col))
         except Exception as e:
             raise ValueError(f"Cannot serialize geometry: {e}")
+
     geom = tuples_to_lists(geom)
+
+    # Build properties dict, excluding None values
+    properties = {}
+    if name is not None:
+        properties['name'] = name
+    if description is not None:
+        properties['description'] = description
+    # Add any other non-null properties here if needed in the future
+
     return {
-        "id": id_,
-        "name": name,
-        "description": description,
-        "geometry": geom
+        "type": "Feature",
+        "id": id_,         # Use feature ID
+        "geometry": geom,
+        "properties": properties
     }
 
 router = APIRouter()
@@ -138,7 +170,7 @@ def query_within(
         raise HTTPException(status_code=422, detail=f"Invalid geometry: {str(e)}")
     return [serialize_spatial_row(row) for row in results]
 
-@router.post("/features/{table_name}/query/bbox", response_model=List[SpatialOut])
+@router.post("/features/{table_name}/query/bbox")
 def query_bbox(
     table_name: str,
     body: dict = Body(..., description="Bounding box as {\"bbox\": [minx, miny, maxx, maxy]}"),
@@ -146,21 +178,59 @@ def query_bbox(
 ):
     """
     Return all features within the bounding box from the specified table.
-    Accepts either {"bbox": [...]} or direct dict with bbox key.
+    Accepts either {\"bbox\": [...]} or direct dict with bbox key.
+    Returns features as a GeoJSON FeatureCollection.
     """
-    table_name = validate_table_name(table_name)
-    bbox = body.get("bbox") if isinstance(body, dict) else None
-    if bbox is None and isinstance(body, dict) and len(body) == 4:
-        bbox = [body.get(k) for k in ("minx", "miny", "maxx", "maxy")]
+    safe_table_name = validate_table_name(table_name)
+    bbox = body.get("bbox")
     if not bbox or not isinstance(bbox, list) or len(bbox) != 4:
         raise HTTPException(status_code=422, detail="bbox must be a list of four numbers [minx, miny, maxx, maxy]")
+
     minx, miny, maxx, maxy = bbox
+
+    # Fetch column names for the table
+    try:
+        column_query = text("""
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = :table_name
+            ORDER BY ordinal_position;
+        """)
+        column_result = db.execute(column_query, {"table_name": safe_table_name})
+        columns = [row[0] for row in column_result]
+
+        if not columns:
+            raise HTTPException(status_code=404, detail=f"Table '{safe_table_name}' not found or has no columns.")
+        if 'id' not in columns:
+             raise HTTPException(status_code=500, detail=f"Table '{safe_table_name}' is missing the required 'id' column.")
+        if 'geometry' not in columns:
+             raise HTTPException(status_code=500, detail=f"Table '{safe_table_name}' is missing the required 'geometry' column.")
+
+    except Exception as e:
+        # Log the error e
+        raise HTTPException(status_code=500, detail=f"Error fetching columns for table '{safe_table_name}': {e}")
+
+    # Construct the SELECT statement with explicit, quoted column names
+    select_columns = ", ".join([f'"{col}"' for col in columns]) # Quote identifiers
+
+    # Construct the spatial query
     sql = text(f"""
-        SELECT * FROM {table_name}
+        SELECT {select_columns}
+        FROM public."{safe_table_name}" -- Use quoted table name
         WHERE geometry && ST_MakeEnvelope(:minx, :miny, :maxx, :maxy, 4326)
     """)
-    results = db.execute(sql, {"minx": minx, "miny": miny, "maxx": maxx, "maxy": maxy}).fetchall()
-    return [serialize_spatial_row(row) for row in results]
+
+    try:
+        results = db.execute(sql, {"minx": minx, "miny": miny, "maxx": maxx, "maxy": maxy}).fetchall()
+        features = [serialize_spatial_row(row) for row in results]
+        # Return as GeoJSON FeatureCollection
+        return {
+            "type": "FeatureCollection",
+            "features": features
+        }
+    except Exception as e:
+        # Log the error e
+        raise HTTPException(status_code=500, detail=f"Error querying features: {e}")
 
 @router.post("/features/{table_name}/query/distance", response_model=List[SpatialOut])
 def query_distance(

@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from app.api import spatial
 from app.api import spatial_table
 from app.api import spatial_query
+from app.api import geopackage_import
 
 app = FastAPI(
     title="Orata API Backend",
@@ -15,3 +16,4 @@ app = FastAPI(
 app.include_router(spatial.router)
 app.include_router(spatial_table.router)
 app.include_router(spatial_query.router)
+app.include_router(geopackage_import.router)
