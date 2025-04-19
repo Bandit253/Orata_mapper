@@ -1,0 +1,306 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.3, pytest-8.3.5, pluggy-1.5.0 -- D:\_OrataMap\mapper\.env313\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\_OrataMap\mapper
+plugins: anyio-4.9.0
+collecting ... collected 35 items
+
+app/tests/test_spatial_crud.py::test_create_feature PASSED               [  2%]
+app/tests/test_spatial_crud.py::test_read_features PASSED                [  5%]
+app/tests/test_spatial_crud.py::test_update_feature PASSED               [  8%]
+app/tests/test_spatial_crud.py::test_delete_feature PASSED               [ 11%]
+app/tests/test_spatial_crud.py::test_invalid_table_name PASSED           [ 14%]
+app/tests/test_spatial_crud.py::test_invalid_geometry PASSED             [ 17%]
+app/tests/test_spatial_crud.py::test_query_within FAILED                 [ 20%]
+app/tests/test_spatial_crud.py::test_query_bbox PASSED                   [ 22%]
+app/tests/test_spatial_crud.py::test_query_bbox_invalid_bbox PASSED      [ 25%]
+app/tests/test_spatial_crud.py::test_query_bbox_missing_bbox PASSED      [ 28%]
+app/tests/test_spatial_crud.py::test_query_distance FAILED               [ 31%]
+app/tests/test_spatial_crud.py::test_query_intersects FAILED             [ 34%]
+
+================================== FAILURES ===================================
+______________________________ test_query_within ______________________________
+
+    def test_query_within():
+        # Recreate a feature
+        client.post(f"/features/{TEST_TABLE}/", json=feature_payload())
+        geom = {"type": "Point", "coordinates": [100.0, 0.0]}
+        resp = client.post(f"/features/{TEST_TABLE}/query/within", json={"geometry": geom})
+        assert resp.status_code == 200
+>       assert any(f["name"] == "Test Feature" for f in resp.json())
+E       assert False
+E        +  where False = any(<generator object test_query_within.<locals>.<genexpr> at 0x000002489ACF7440>)
+
+app\tests\test_spatial_crud.py:91: AssertionError
+---------------------------- Captured stdout call -----------------------------
+2025-04-19 14:47:23,617 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-04-19 14:47:23,617 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_attribute.attname AS name, pg_catalog.format_type(pg_catalog.pg_attribute.atttypid, pg_catalog.pg_attribute.atttypmod) AS format_type, (SELECT pg_catalog.pg_get_expr(pg_catalog.pg_attrdef.adbin, pg_catalog.pg_attrdef.adrelid) AS pg_get_expr_1 
+FROM pg_catalog.pg_attrdef 
+WHERE pg_catalog.pg_attrdef.adrelid = pg_catalog.pg_attribute.attrelid AND pg_catalog.pg_attrdef.adnum = pg_catalog.pg_attribute.attnum AND pg_catalog.pg_attribute.atthasdef) AS "default", pg_catalog.pg_attribute.attnotnull AS not_null, pg_catalog.pg_class.relname AS table_name, pg_catalog.pg_description.description AS comment, pg_catalog.pg_attribute.attgenerated AS generated, (SELECT json_build_object(%(json_build_object_2)s, pg_catalog.pg_attribute.attidentity = %(attidentity_1)s, %(json_build_object_3)s, pg_catalog.pg_sequence.seqstart, %(json_build_object_4)s, pg_catalog.pg_sequence.seqincrement, %(json_build_object_5)s, pg_catalog.pg_sequence.seqmin, %(json_build_object_6)s, pg_catalog.pg_sequence.seqmax, %(json_build_object_7)s, pg_catalog.pg_sequence.seqcache, %(json_build_object_8)s, pg_catalog.pg_sequence.seqcycle) AS json_build_object_1 
+FROM pg_catalog.pg_sequence 
+WHERE pg_catalog.pg_attribute.attidentity != %(attidentity_2)s AND pg_catalog.pg_sequence.seqrelid = CAST(CAST(pg_catalog.pg_get_serial_sequence(CAST(CAST(pg_catalog.pg_attribute.attrelid AS REGCLASS) AS TEXT), pg_catalog.pg_attribute.attname) AS REGCLASS) AS OID)) AS identity_options 
+FROM pg_catalog.pg_class LEFT OUTER JOIN pg_catalog.pg_attribute ON pg_catalog.pg_class.oid = pg_catalog.pg_attribute.attrelid AND pg_catalog.pg_attribute.attnum > %(attnum_1)s AND NOT pg_catalog.pg_attribute.attisdropped LEFT OUTER JOIN pg_catalog.pg_description ON pg_catalog.pg_description.objoid = pg_catalog.pg_attribute.attrelid AND pg_catalog.pg_description.objsubid = pg_catalog.pg_attribute.attnum JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s AND pg_catalog.pg_class.relname IN (%(filter_names_1)s) ORDER BY pg_catalog.pg_class.relname, pg_catalog.pg_attribute.attnum
+2025-04-19 14:47:23,617 INFO sqlalchemy.engine.Engine [cached since 0.3506s ago] {'json_build_object_2': 'always', 'attidentity_1': 'a', 'json_build_object_3': 'start', 'json_build_object_4': 'increment', 'json_build_object_5': 'minvalue', 'json_build_object_6': 'maxvalue', 'json_build_object_7': 'cache', 'json_build_object_8': 'cycle', 'attidentity_2': '', 'attnum_1': 0, 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog', 'filter_names_1': 'test_features'}
+2025-04-19 14:47:23,619 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_type.typname AS name, pg_catalog.format_type(pg_catalog.pg_type.typbasetype, pg_catalog.pg_type.typtypmod) AS attype, NOT pg_catalog.pg_type.typnotnull AS nullable, pg_catalog.pg_type.typdefault AS "default", pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AS visible, pg_catalog.pg_namespace.nspname AS schema, domain_constraints.condefs, domain_constraints.connames, pg_catalog.pg_collation.collname 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace LEFT OUTER JOIN pg_catalog.pg_collation ON pg_catalog.pg_type.typcollation = pg_catalog.pg_collation.oid LEFT OUTER JOIN (SELECT pg_catalog.pg_constraint.contypid AS contypid, array_agg(pg_catalog.pg_get_constraintdef(pg_catalog.pg_constraint.oid, %(pg_get_constraintdef_1)s)) AS condefs, array_agg(CAST(pg_catalog.pg_constraint.conname AS TEXT)) AS connames 
+FROM pg_catalog.pg_constraint 
+WHERE pg_catalog.pg_constraint.contypid != %(contypid_1)s GROUP BY pg_catalog.pg_constraint.contypid) AS domain_constraints ON pg_catalog.pg_type.oid = domain_constraints.contypid 
+WHERE pg_catalog.pg_type.typtype = %(typtype_1)s ORDER BY pg_catalog.pg_namespace.nspname, pg_catalog.pg_type.typname
+2025-04-19 14:47:23,619 INFO sqlalchemy.engine.Engine [cached since 0.3385s ago] {'pg_get_constraintdef_1': True, 'contypid_1': 0, 'typtype_1': 'd'}
+2025-04-19 14:47:23,621 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_type.typname AS name, pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AS visible, pg_catalog.pg_namespace.nspname AS schema, lbl_agg.labels AS labels 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace LEFT OUTER JOIN (SELECT pg_catalog.pg_enum.enumtypid AS enumtypid, array_agg(CAST(pg_catalog.pg_enum.enumlabel AS TEXT) ORDER BY pg_catalog.pg_enum.enumsortorder) AS labels 
+FROM pg_catalog.pg_enum GROUP BY pg_catalog.pg_enum.enumtypid) AS lbl_agg ON pg_catalog.pg_type.oid = lbl_agg.enumtypid 
+WHERE pg_catalog.pg_type.typtype = %(typtype_1)s ORDER BY pg_catalog.pg_namespace.nspname, pg_catalog.pg_type.typname
+2025-04-19 14:47:23,621 INFO sqlalchemy.engine.Engine [cached since 0.3334s ago] {'typtype_1': 'e'}
+2025-04-19 14:47:23,622 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.oid, pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s AND pg_catalog.pg_class.relname IN (%(filter_names_1)s)
+2025-04-19 14:47:23,622 INFO sqlalchemy.engine.Engine [cached since 0.3301s ago] {'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog', 'filter_names_1': 'test_features'}
+2025-04-19 14:47:23,623 INFO sqlalchemy.engine.Engine SELECT attr.conrelid, array_agg(CAST(attr.attname AS TEXT) ORDER BY attr.ord) AS cols, attr.conname, min(attr.description) AS description, NULL AS extra 
+FROM (SELECT con.conrelid AS conrelid, con.conname AS conname, con.conindid AS conindid, con.description AS description, con.ord AS ord, pg_catalog.pg_attribute.attname AS attname 
+FROM pg_catalog.pg_attribute JOIN (SELECT pg_catalog.pg_constraint.conrelid AS conrelid, pg_catalog.pg_constraint.conname AS conname, pg_catalog.pg_constraint.conindid AS conindid, unnest(pg_catalog.pg_constraint.conkey) AS attnum, generate_subscripts(pg_catalog.pg_constraint.conkey, %(generate_subscripts_1)s) AS ord, pg_catalog.pg_description.description AS description 
+FROM pg_catalog.pg_constraint LEFT OUTER JOIN pg_catalog.pg_description ON pg_catalog.pg_description.objoid = pg_catalog.pg_constraint.oid 
+WHERE pg_catalog.pg_constraint.contype = %(contype)s AND pg_catalog.pg_constraint.conrelid IN (%(oids_1)s)) AS con ON pg_catalog.pg_attribute.attnum = con.attnum AND pg_catalog.pg_attribute.attrelid = con.conrelid 
+WHERE con.conrelid IN (%(oids_1)s)) AS attr GROUP BY attr.conrelid, attr.conname ORDER BY attr.conrelid, attr.conname
+2025-04-19 14:47:23,623 INFO sqlalchemy.engine.Engine [cached since 0.3281s ago] {'generate_subscripts_1': 1, 'contype': 'p', 'oids_1': 28273}
+2025-04-19 14:47:23,624 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname, pg_catalog.pg_constraint.conname, CASE WHEN (pg_catalog.pg_constraint.oid IS NOT NULL) THEN pg_catalog.pg_get_constraintdef(pg_catalog.pg_constraint.oid, %(pg_get_constraintdef_1)s) END AS anon_1, nsp_ref.nspname, pg_catalog.pg_description.description 
+FROM pg_catalog.pg_class LEFT OUTER JOIN pg_catalog.pg_constraint ON pg_catalog.pg_class.oid = pg_catalog.pg_constraint.conrelid AND pg_catalog.pg_constraint.contype = %(contype_1)s LEFT OUTER JOIN pg_catalog.pg_class AS cls_ref ON cls_ref.oid = pg_catalog.pg_constraint.confrelid LEFT OUTER JOIN pg_catalog.pg_namespace AS nsp_ref ON cls_ref.relnamespace = nsp_ref.oid LEFT OUTER JOIN pg_catalog.pg_description ON pg_catalog.pg_description.objoid = pg_catalog.pg_constraint.oid JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s AND pg_catalog.pg_class.relname IN (%(filter_names_1)s) ORDER BY pg_catalog.pg_class.relname, pg_catalog.pg_constraint.conname
+2025-04-19 14:47:23,624 INFO sqlalchemy.engine.Engine [cached since 0.3254s ago] {'pg_get_constraintdef_1': True, 'contype_1': 'f', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog', 'filter_names_1': 'test_features'}
+2025-04-19 14:47:23,625 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_index.indrelid, cls_idx.relname AS relname_index, pg_catalog.pg_index.indisunique, pg_catalog.pg_constraint.conrelid IS NOT NULL AS has_constraint, pg_catalog.pg_index.indoption, cls_idx.reloptions, pg_catalog.pg_am.amname, CASE WHEN (pg_catalog.pg_index.indpred IS NOT NULL) THEN pg_catalog.pg_get_expr(pg_catalog.pg_index.indpred, pg_catalog.pg_index.indrelid) END AS filter_definition, pg_catalog.pg_index.indnkeyatts, pg_catalog.pg_index.indnullsnotdistinct, idx_cols.elements, idx_cols.elements_is_expr 
+FROM pg_catalog.pg_index JOIN pg_catalog.pg_class AS cls_idx ON pg_catalog.pg_index.indexrelid = cls_idx.oid JOIN pg_catalog.pg_am ON cls_idx.relam = pg_catalog.pg_am.oid LEFT OUTER JOIN (SELECT idx_attr.indexrelid AS indexrelid, min(idx_attr.indrelid) AS min_1, array_agg(idx_attr.element ORDER BY idx_attr.ord) AS elements, array_agg(idx_attr.is_expr ORDER BY idx_attr.ord) AS elements_is_expr 
+FROM (SELECT idx.indexrelid AS indexrelid, idx.indrelid AS indrelid, idx.ord AS ord, CASE WHEN (idx.attnum = %(attnum_1)s) THEN pg_catalog.pg_get_indexdef(idx.indexrelid, idx.ord + %(ord_1)s, %(pg_get_indexdef_1)s) ELSE CAST(pg_catalog.pg_attribute.attname AS TEXT) END AS element, idx.attnum = %(attnum_2)s AS is_expr 
+FROM (SELECT pg_catalog.pg_index.indexrelid AS indexrelid, pg_catalog.pg_index.indrelid AS indrelid, unnest(pg_catalog.pg_index.indkey) AS attnum, generate_subscripts(pg_catalog.pg_index.indkey, %(generate_subscripts_1)s) AS ord 
+FROM pg_catalog.pg_index 
+WHERE NOT pg_catalog.pg_index.indisprimary AND pg_catalog.pg_index.indrelid IN (%(oids_1)s)) AS idx LEFT OUTER JOIN pg_catalog.pg_attribute ON pg_catalog.pg_attribute.attnum = idx.attnum AND pg_catalog.pg_attribute.attrelid = idx.indrelid 
+WHERE idx.indrelid IN (%(oids_1)s)) AS idx_attr GROUP BY idx_attr.indexrelid) AS idx_cols ON pg_catalog.pg_index.indexrelid = idx_cols.indexrelid LEFT OUTER JOIN pg_catalog.pg_constraint ON pg_catalog.pg_index.indrelid = pg_catalog.pg_constraint.conrelid AND pg_catalog.pg_index.indexrelid = pg_catalog.pg_constraint.conindid AND pg_catalog.pg_constraint.contype = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s]) 
+WHERE pg_catalog.pg_index.indrelid IN (%(oids_1)s) AND NOT pg_catalog.pg_index.indisprimary ORDER BY pg_catalog.pg_index.indrelid, cls_idx.relname
+2025-04-19 14:47:23,625 INFO sqlalchemy.engine.Engine [cached since 0.3211s ago] {'attnum_1': 0, 'ord_1': 1, 'pg_get_indexdef_1': True, 'attnum_2': 0, 'generate_subscripts_1': 1, 'param_1': 'p', 'param_2': 'u', 'param_3': 'x', 'oids_1': 28273}
+2025-04-19 14:47:23,626 INFO sqlalchemy.engine.Engine SELECT attr.conrelid, array_agg(CAST(attr.attname AS TEXT) ORDER BY attr.ord) AS cols, attr.conname, min(attr.description) AS description, bool_and(pg_catalog.pg_index.indnullsnotdistinct) AS indnullsnotdistinct 
+FROM (SELECT con.conrelid AS conrelid, con.conname AS conname, con.conindid AS conindid, con.description AS description, con.ord AS ord, pg_catalog.pg_attribute.attname AS attname 
+FROM pg_catalog.pg_attribute JOIN (SELECT pg_catalog.pg_constraint.conrelid AS conrelid, pg_catalog.pg_constraint.conname AS conname, pg_catalog.pg_constraint.conindid AS conindid, unnest(pg_catalog.pg_constraint.conkey) AS attnum, generate_subscripts(pg_catalog.pg_constraint.conkey, %(generate_subscripts_1)s) AS ord, pg_catalog.pg_description.description AS description 
+FROM pg_catalog.pg_constraint LEFT OUTER JOIN pg_catalog.pg_description ON pg_catalog.pg_description.objoid = pg_catalog.pg_constraint.oid 
+WHERE pg_catalog.pg_constraint.contype = %(contype)s AND pg_catalog.pg_constraint.conrelid IN (%(oids_1)s)) AS con ON pg_catalog.pg_attribute.attnum = con.attnum AND pg_catalog.pg_attribute.attrelid = con.conrelid 
+WHERE con.conrelid IN (%(oids_1)s)) AS attr JOIN pg_catalog.pg_index ON attr.conindid = pg_catalog.pg_index.indexrelid GROUP BY attr.conrelid, attr.conname ORDER BY attr.conrelid, attr.conname
+2025-04-19 14:47:23,627 INFO sqlalchemy.engine.Engine [cached since 0.3156s ago] {'generate_subscripts_1': 1, 'contype': 'u', 'oids_1': 28273}
+2025-04-19 14:47:23,627 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname, pg_catalog.pg_description.description 
+FROM pg_catalog.pg_class LEFT OUTER JOIN pg_catalog.pg_description ON pg_catalog.pg_class.oid = pg_catalog.pg_description.objoid AND pg_catalog.pg_description.objsubid = %(objsubid_1)s AND pg_catalog.pg_description.classoid = CAST(%(param_1)s AS REGCLASS) JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s, %(param_6)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s AND pg_catalog.pg_class.relname IN (%(filter_names_1)s)
+2025-04-19 14:47:23,628 INFO sqlalchemy.engine.Engine [cached since 0.3146s ago] {'objsubid_1': 0, 'param_1': 'pg_catalog.pg_class', 'param_2': 'r', 'param_3': 'p', 'param_4': 'f', 'param_5': 'v', 'param_6': 'm', 'nspname_1': 'pg_catalog', 'filter_names_1': 'test_features'}
+2025-04-19 14:47:23,629 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname, pg_catalog.pg_constraint.conname, CASE WHEN (pg_catalog.pg_constraint.oid IS NOT NULL) THEN pg_catalog.pg_get_constraintdef(pg_catalog.pg_constraint.oid, %(pg_get_constraintdef_1)s) END AS anon_1, pg_catalog.pg_description.description 
+FROM pg_catalog.pg_class LEFT OUTER JOIN pg_catalog.pg_constraint ON pg_catalog.pg_class.oid = pg_catalog.pg_constraint.conrelid AND pg_catalog.pg_constraint.contype = %(contype_1)s LEFT OUTER JOIN pg_catalog.pg_description ON pg_catalog.pg_description.objoid = pg_catalog.pg_constraint.oid JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s AND pg_catalog.pg_class.relname IN (%(filter_names_1)s) ORDER BY pg_catalog.pg_class.relname, pg_catalog.pg_constraint.conname
+2025-04-19 14:47:23,629 INFO sqlalchemy.engine.Engine [cached since 0.3136s ago] {'pg_get_constraintdef_1': True, 'contype_1': 'c', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog', 'filter_names_1': 'test_features'}
+2025-04-19 14:47:23,630 INFO sqlalchemy.engine.Engine SELECT (indexrelid IS NOT NULL) AS has_index
+        FROM (
+            SELECT
+                    n.nspname,
+                    c.relname,
+                    c.oid AS relid,
+                    a.attname,
+                    a.attnum
+            FROM pg_attribute a
+            INNER JOIN pg_class c ON (a.attrelid=c.oid)
+            INNER JOIN pg_type t ON (a.atttypid=t.oid)
+            INNER JOIN pg_namespace n ON (c.relnamespace=n.oid)
+            WHERE t.typname='geometry'
+                    AND c.relkind='r'
+        ) g
+        LEFT JOIN pg_index i ON (g.relid = i.indrelid AND g.attnum = ANY(i.indkey))
+        WHERE relname = 'test_features' AND attname = 'geometry';
+    
+2025-04-19 14:47:23,630 INFO sqlalchemy.engine.Engine [cached since 0.3133s ago] {}
+2025-04-19 14:47:23,631 INFO sqlalchemy.engine.Engine ROLLBACK
+2025-04-19 14:47:23,633 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-04-19 14:47:23,634 INFO sqlalchemy.engine.Engine INSERT INTO test_features (name, description, geometry) VALUES (%(name)s, %(description)s, ST_GeomFromEWKT(%(geometry)s)) RETURNING test_features.id, test_features.name, test_features.description, ST_AsEWKB(test_features.geometry) AS geometry
+2025-04-19 14:47:23,634 INFO sqlalchemy.engine.Engine [generated in 0.00018s] {'name': 'Test Feature', 'description': 'A test feature', 'geometry': 'SRID=4326;POINT (100 0)'}
+2025-04-19 14:47:23,635 INFO sqlalchemy.engine.Engine COMMIT
+2025-04-19 14:47:23,643 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-04-19 14:47:23,643 INFO sqlalchemy.engine.Engine 
+        SELECT * FROM test_features
+        WHERE ST_Within(
+            geometry,
+            ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s), 4326)
+        )
+    
+2025-04-19 14:47:23,643 INFO sqlalchemy.engine.Engine [generated in 0.00011s] {'geojson': '{"type": "Point", "coordinates": [100.0, 0.0]}'}
+2025-04-19 14:47:23,645 INFO sqlalchemy.engine.Engine ROLLBACK
+------------------------------ Captured log call ------------------------------
+INFO     sqlalchemy.engine.Engine:base.py:2699 BEGIN (implicit)
+INFO     sqlalchemy.engine.Engine:base.py:1843 SELECT pg_catalog.pg_attribute.attname AS name, pg_catalog.format_type(pg_catalog.pg_attribute.atttypid, pg_catalog.pg_attribute.atttypmod) AS format_type, (SELECT pg_catalog.pg_get_expr(pg_catalog.pg_attrdef.adbin, pg_catalog.pg_attrdef.adrelid) AS pg_get_expr_1 
+FROM pg_catalog.pg_attrdef 
+WHERE pg_catalog.pg_attrdef.adrelid = pg_catalog.pg_attribute.attrelid AND pg_catalog.pg_attrdef.adnum = pg_catalog.pg_attribute.attnum AND pg_catalog.pg_attribute.atthasdef) AS "default", pg_catalog.pg_attribute.attnotnull AS not_null, pg_catalog.pg_class.relname AS table_name, pg_catalog.pg_description.description AS comment, pg_catalog.pg_attribute.attgenerated AS generated, (SELECT json_build_object(%(json_build_object_2)s, pg_catalog.pg_attribute.attidentity = %(attidentity_1)s, %(json_build_object_3)s, pg_catalog.pg_sequence.seqstart, %(json_build_object_4)s, pg_catalog.pg_sequence.seqincrement, %(json_build_object_5)s, pg_catalog.pg_sequence.seqmin, %(json_build_object_6)s, pg_catalog.pg_sequence.seqmax, %(json_build_object_7)s, pg_catalog.pg_sequence.seqcache, %(json_build_object_8)s, pg_catalog.pg_sequence.seqcycle) AS json_build_object_1 
+FROM pg_catalog.pg_sequence 
+WHERE pg_catalog.pg_attribute.attidentity != %(attidentity_2)s AND pg_catalog.pg_sequence.seqrelid = CAST(CAST(pg_catalog.pg_get_serial_sequence(CAST(CAST(pg_catalog.pg_attribute.attrelid AS REGCLASS) AS TEXT), pg_catalog.pg_attribute.attname) AS REGCLASS) AS OID)) AS identity_options 
+FROM pg_catalog.pg_class LEFT OUTER JOIN pg_catalog.pg_attribute ON pg_catalog.pg_class.oid = pg_catalog.pg_attribute.attrelid AND pg_catalog.pg_attribute.attnum > %(attnum_1)s AND NOT pg_catalog.pg_attribute.attisdropped LEFT OUTER JOIN pg_catalog.pg_description ON pg_catalog.pg_description.objoid = pg_catalog.pg_attribute.attrelid AND pg_catalog.pg_description.objsubid = pg_catalog.pg_attribute.attnum JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s AND pg_catalog.pg_class.relname IN (%(filter_names_1)s) ORDER BY pg_catalog.pg_class.relname, pg_catalog.pg_attribute.attnum
+INFO     sqlalchemy.engine.Engine:base.py:1843 [cached since 0.3506s ago] {'json_build_object_2': 'always', 'attidentity_1': 'a', 'json_build_object_3': 'start', 'json_build_object_4': 'increment', 'json_build_object_5': 'minvalue', 'json_build_object_6': 'maxvalue', 'json_build_object_7': 'cache', 'json_build_object_8': 'cycle', 'attidentity_2': '', 'attnum_1': 0, 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog', 'filter_names_1': 'test_features'}
+INFO     sqlalchemy.engine.Engine:base.py:1843 SELECT pg_catalog.pg_type.typname AS name, pg_catalog.format_type(pg_catalog.pg_type.typbasetype, pg_catalog.pg_type.typtypmod) AS attype, NOT pg_catalog.pg_type.typnotnull AS nullable, pg_catalog.pg_type.typdefault AS "default", pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AS visible, pg_catalog.pg_namespace.nspname AS schema, domain_constraints.condefs, domain_constraints.connames, pg_catalog.pg_collation.collname 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace LEFT OUTER JOIN pg_catalog.pg_collation ON pg_catalog.pg_type.typcollation = pg_catalog.pg_collation.oid LEFT OUTER JOIN (SELECT pg_catalog.pg_constraint.contypid AS contypid, array_agg(pg_catalog.pg_get_constraintdef(pg_catalog.pg_constraint.oid, %(pg_get_constraintdef_1)s)) AS condefs, array_agg(CAST(pg_catalog.pg_constraint.conname AS TEXT)) AS connames 
+FROM pg_catalog.pg_constraint 
+WHERE pg_catalog.pg_constraint.contypid != %(contypid_1)s GROUP BY pg_catalog.pg_constraint.contypid) AS domain_constraints ON pg_catalog.pg_type.oid = domain_constraints.contypid 
+WHERE pg_catalog.pg_type.typtype = %(typtype_1)s ORDER BY pg_catalog.pg_namespace.nspname, pg_catalog.pg_type.typname
+INFO     sqlalchemy.engine.Engine:base.py:1843 [cached since 0.3385s ago] {'pg_get_constraintdef_1': True, 'contypid_1': 0, 'typtype_1': 'd'}
+INFO     sqlalchemy.engine.Engine:base.py:1843 SELECT pg_catalog.pg_type.typname AS name, pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AS visible, pg_catalog.pg_namespace.nspname AS schema, lbl_agg.labels AS labels 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace LEFT OUTER JOIN (SELECT pg_catalog.pg_enum.enumtypid AS enumtypid, array_agg(CAST(pg_catalog.pg_enum.enumlabel AS TEXT) ORDER BY pg_catalog.pg_enum.enumsortorder) AS labels 
+FROM pg_catalog.pg_enum GROUP BY pg_catalog.pg_enum.enumtypid) AS lbl_agg ON pg_catalog.pg_type.oid = lbl_agg.enumtypid 
+WHERE pg_catalog.pg_type.typtype = %(typtype_1)s ORDER BY pg_catalog.pg_namespace.nspname, pg_catalog.pg_type.typname
+INFO     sqlalchemy.engine.Engine:base.py:1843 [cached since 0.3334s ago] {'typtype_1': 'e'}
+INFO     sqlalchemy.engine.Engine:base.py:1843 SELECT pg_catalog.pg_class.oid, pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s AND pg_catalog.pg_class.relname IN (%(filter_names_1)s)
+INFO     sqlalchemy.engine.Engine:base.py:1843 [cached since 0.3301s ago] {'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog', 'filter_names_1': 'test_features'}
+INFO     sqlalchemy.engine.Engine:base.py:1843 SELECT attr.conrelid, array_agg(CAST(attr.attname AS TEXT) ORDER BY attr.ord) AS cols, attr.conname, min(attr.description) AS description, NULL AS extra 
+FROM (SELECT con.conrelid AS conrelid, con.conname AS conname, con.conindid AS conindid, con.description AS description, con.ord AS ord, pg_catalog.pg_attribute.attname AS attname 
+FROM pg_catalog.pg_attribute JOIN (SELECT pg_catalog.pg_constraint.conrelid AS conrelid, pg_catalog.pg_constraint.conname AS conname, pg_catalog.pg_constraint.conindid AS conindid, unnest(pg_catalog.pg_constraint.conkey) AS attnum, generate_subscripts(pg_catalog.pg_constraint.conkey, %(generate_subscripts_1)s) AS ord, pg_catalog.pg_description.description AS description 
+FROM pg_catalog.pg_constraint LEFT OUTER JOIN pg_catalog.pg_description ON pg_catalog.pg_description.objoid = pg_catalog.pg_constraint.oid 
+WHERE pg_catalog.pg_constraint.contype = %(contype)s AND pg_catalog.pg_constraint.conrelid IN (%(oids_1)s)) AS con ON pg_catalog.pg_attribute.attnum = con.attnum AND pg_catalog.pg_attribute.attrelid = con.conrelid 
+WHERE con.conrelid IN (%(oids_1)s)) AS attr GROUP BY attr.conrelid, attr.conname ORDER BY attr.conrelid, attr.conname
+INFO     sqlalchemy.engine.Engine:base.py:1843 [cached since 0.3281s ago] {'generate_subscripts_1': 1, 'contype': 'p', 'oids_1': 28273}
+INFO     sqlalchemy.engine.Engine:base.py:1843 SELECT pg_catalog.pg_class.relname, pg_catalog.pg_constraint.conname, CASE WHEN (pg_catalog.pg_constraint.oid IS NOT NULL) THEN pg_catalog.pg_get_constraintdef(pg_catalog.pg_constraint.oid, %(pg_get_constraintdef_1)s) END AS anon_1, nsp_ref.nspname, pg_catalog.pg_description.description 
+FROM pg_catalog.pg_class LEFT OUTER JOIN pg_catalog.pg_constraint ON pg_catalog.pg_class.oid = pg_catalog.pg_constraint.conrelid AND pg_catalog.pg_constraint.contype = %(contype_1)s LEFT OUTER JOIN pg_catalog.pg_class AS cls_ref ON cls_ref.oid = pg_catalog.pg_constraint.confrelid LEFT OUTER JOIN pg_catalog.pg_namespace AS nsp_ref ON cls_ref.relnamespace = nsp_ref.oid LEFT OUTER JOIN pg_catalog.pg_description ON pg_catalog.pg_description.objoid = pg_catalog.pg_constraint.oid JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s AND pg_catalog.pg_class.relname IN (%(filter_names_1)s) ORDER BY pg_catalog.pg_class.relname, pg_catalog.pg_constraint.conname
+INFO     sqlalchemy.engine.Engine:base.py:1843 [cached since 0.3254s ago] {'pg_get_constraintdef_1': True, 'contype_1': 'f', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog', 'filter_names_1': 'test_features'}
+INFO     sqlalchemy.engine.Engine:base.py:1843 SELECT pg_catalog.pg_index.indrelid, cls_idx.relname AS relname_index, pg_catalog.pg_index.indisunique, pg_catalog.pg_constraint.conrelid IS NOT NULL AS has_constraint, pg_catalog.pg_index.indoption, cls_idx.reloptions, pg_catalog.pg_am.amname, CASE WHEN (pg_catalog.pg_index.indpred IS NOT NULL) THEN pg_catalog.pg_get_expr(pg_catalog.pg_index.indpred, pg_catalog.pg_index.indrelid) END AS filter_definition, pg_catalog.pg_index.indnkeyatts, pg_catalog.pg_index.indnullsnotdistinct, idx_cols.elements, idx_cols.elements_is_expr 
+FROM pg_catalog.pg_index JOIN pg_catalog.pg_class AS cls_idx ON pg_catalog.pg_index.indexrelid = cls_idx.oid JOIN pg_catalog.pg_am ON cls_idx.relam = pg_catalog.pg_am.oid LEFT OUTER JOIN (SELECT idx_attr.indexrelid AS indexrelid, min(idx_attr.indrelid) AS min_1, array_agg(idx_attr.element ORDER BY idx_attr.ord) AS elements, array_agg(idx_attr.is_expr ORDER BY idx_attr.ord) AS elements_is_expr 
+FROM (SELECT idx.indexrelid AS indexrelid, idx.indrelid AS indrelid, idx.ord AS ord, CASE WHEN (idx.attnum = %(attnum_1)s) THEN pg_catalog.pg_get_indexdef(idx.indexrelid, idx.ord + %(ord_1)s, %(pg_get_indexdef_1)s) ELSE CAST(pg_catalog.pg_attribute.attname AS TEXT) END AS element, idx.attnum = %(attnum_2)s AS is_expr 
+FROM (SELECT pg_catalog.pg_index.indexrelid AS indexrelid, pg_catalog.pg_index.indrelid AS indrelid, unnest(pg_catalog.pg_index.indkey) AS attnum, generate_subscripts(pg_catalog.pg_index.indkey, %(generate_subscripts_1)s) AS ord 
+FROM pg_catalog.pg_index 
+WHERE NOT pg_catalog.pg_index.indisprimary AND pg_catalog.pg_index.indrelid IN (%(oids_1)s)) AS idx LEFT OUTER JOIN pg_catalog.pg_attribute ON pg_catalog.pg_attribute.attnum = idx.attnum AND pg_catalog.pg_attribute.attrelid = idx.indrelid 
+WHERE idx.indrelid IN (%(oids_1)s)) AS idx_attr GROUP BY idx_attr.indexrelid) AS idx_cols ON pg_catalog.pg_index.indexrelid = idx_cols.indexrelid LEFT OUTER JOIN pg_catalog.pg_constraint ON pg_catalog.pg_index.indrelid = pg_catalog.pg_constraint.conrelid AND pg_catalog.pg_index.indexrelid = pg_catalog.pg_constraint.conindid AND pg_catalog.pg_constraint.contype = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s]) 
+WHERE pg_catalog.pg_index.indrelid IN (%(oids_1)s) AND NOT pg_catalog.pg_index.indisprimary ORDER BY pg_catalog.pg_index.indrelid, cls_idx.relname
+INFO     sqlalchemy.engine.Engine:base.py:1843 [cached since 0.3211s ago] {'attnum_1': 0, 'ord_1': 1, 'pg_get_indexdef_1': True, 'attnum_2': 0, 'generate_subscripts_1': 1, 'param_1': 'p', 'param_2': 'u', 'param_3': 'x', 'oids_1': 28273}
+INFO     sqlalchemy.engine.Engine:base.py:1843 SELECT attr.conrelid, array_agg(CAST(attr.attname AS TEXT) ORDER BY attr.ord) AS cols, attr.conname, min(attr.description) AS description, bool_and(pg_catalog.pg_index.indnullsnotdistinct) AS indnullsnotdistinct 
+FROM (SELECT con.conrelid AS conrelid, con.conname AS conname, con.conindid AS conindid, con.description AS description, con.ord AS ord, pg_catalog.pg_attribute.attname AS attname 
+FROM pg_catalog.pg_attribute JOIN (SELECT pg_catalog.pg_constraint.conrelid AS conrelid, pg_catalog.pg_constraint.conname AS conname, pg_catalog.pg_constraint.conindid AS conindid, unnest(pg_catalog.pg_constraint.conkey) AS attnum, generate_subscripts(pg_catalog.pg_constraint.conkey, %(generate_subscripts_1)s) AS ord, pg_catalog.pg_description.description AS description 
+FROM pg_catalog.pg_constraint LEFT OUTER JOIN pg_catalog.pg_description ON pg_catalog.pg_description.objoid = pg_catalog.pg_constraint.oid 
+WHERE pg_catalog.pg_constraint.contype = %(contype)s AND pg_catalog.pg_constraint.conrelid IN (%(oids_1)s)) AS con ON pg_catalog.pg_attribute.attnum = con.attnum AND pg_catalog.pg_attribute.attrelid = con.conrelid 
+WHERE con.conrelid IN (%(oids_1)s)) AS attr JOIN pg_catalog.pg_index ON attr.conindid = pg_catalog.pg_index.indexrelid GROUP BY attr.conrelid, attr.conname ORDER BY attr.conrelid, attr.conname
+INFO     sqlalchemy.engine.Engine:base.py:1843 [cached since 0.3156s ago] {'generate_subscripts_1': 1, 'contype': 'u', 'oids_1': 28273}
+INFO     sqlalchemy.engine.Engine:base.py:1843 SELECT pg_catalog.pg_class.relname, pg_catalog.pg_description.description 
+FROM pg_catalog.pg_class LEFT OUTER JOIN pg_catalog.pg_description ON pg_catalog.pg_class.oid = pg_catalog.pg_description.objoid AND pg_catalog.pg_description.objsubid = %(objsubid_1)s AND pg_catalog.pg_description.classoid = CAST(%(param_1)s AS REGCLASS) JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s, %(param_6)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s AND pg_catalog.pg_class.relname IN (%(filter_names_1)s)
+INFO     sqlalchemy.engine.Engine:base.py:1843 [cached since 0.3146s ago] {'objsubid_1': 0, 'param_1': 'pg_catalog.pg_class', 'param_2': 'r', 'param_3': 'p', 'param_4': 'f', 'param_5': 'v', 'param_6': 'm', 'nspname_1': 'pg_catalog', 'filter_names_1': 'test_features'}
+INFO     sqlalchemy.engine.Engine:base.py:1843 SELECT pg_catalog.pg_class.relname, pg_catalog.pg_constraint.conname, CASE WHEN (pg_catalog.pg_constraint.oid IS NOT NULL) THEN pg_catalog.pg_get_constraintdef(pg_catalog.pg_constraint.oid, %(pg_get_constraintdef_1)s) END AS anon_1, pg_catalog.pg_description.description 
+FROM pg_catalog.pg_class LEFT OUTER JOIN pg_catalog.pg_constraint ON pg_catalog.pg_class.oid = pg_catalog.pg_constraint.conrelid AND pg_catalog.pg_constraint.contype = %(contype_1)s LEFT OUTER JOIN pg_catalog.pg_description ON pg_catalog.pg_description.objoid = pg_catalog.pg_constraint.oid JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s AND pg_catalog.pg_class.relname IN (%(filter_names_1)s) ORDER BY pg_catalog.pg_class.relname, pg_catalog.pg_constraint.conname
+INFO     sqlalchemy.engine.Engine:base.py:1843 [cached since 0.3136s ago] {'pg_get_constraintdef_1': True, 'contype_1': 'c', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog', 'filter_names_1': 'test_features'}
+INFO     sqlalchemy.engine.Engine:base.py:1843 SELECT (indexrelid IS NOT NULL) AS has_index
+        FROM (
+            SELECT
+                    n.nspname,
+                    c.relname,
+                    c.oid AS relid,
+                    a.attname,
+                    a.attnum
+            FROM pg_attribute a
+            INNER JOIN pg_class c ON (a.attrelid=c.oid)
+            INNER JOIN pg_type t ON (a.atttypid=t.oid)
+            INNER JOIN pg_namespace n ON (c.relnamespace=n.oid)
+            WHERE t.typname='geometry'
+                    AND c.relkind='r'
+        ) g
+        LEFT JOIN pg_index i ON (g.relid = i.indrelid AND g.attnum = ANY(i.indkey))
+        WHERE relname = 'test_features' AND attname = 'geometry';
+    
+INFO     sqlalchemy.engine.Engine:base.py:1843 [cached since 0.3133s ago] {}
+INFO     sqlalchemy.engine.Engine:base.py:2702 ROLLBACK
+INFO     sqlalchemy.engine.Engine:base.py:2699 BEGIN (implicit)
+INFO     sqlalchemy.engine.Engine:base.py:1843 INSERT INTO test_features (name, description, geometry) VALUES (%(name)s, %(description)s, ST_GeomFromEWKT(%(geometry)s)) RETURNING test_features.id, test_features.name, test_features.description, ST_AsEWKB(test_features.geometry) AS geometry
+INFO     sqlalchemy.engine.Engine:base.py:1843 [generated in 0.00018s] {'name': 'Test Feature', 'description': 'A test feature', 'geometry': 'SRID=4326;POINT (100 0)'}
+INFO     sqlalchemy.engine.Engine:base.py:2705 COMMIT
+INFO     sqlalchemy.engine.Engine:base.py:2699 BEGIN (implicit)
+INFO     sqlalchemy.engine.Engine:base.py:1843 
+        SELECT * FROM test_features
+        WHERE ST_Within(
+            geometry,
+            ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s), 4326)
+        )
+    
+INFO     sqlalchemy.engine.Engine:base.py:1843 [generated in 0.00011s] {'geojson': '{"type": "Point", "coordinates": [100.0, 0.0]}'}
+INFO     sqlalchemy.engine.Engine:base.py:2702 ROLLBACK
+_____________________________ test_query_distance _____________________________
+
+    def test_query_distance():
+        geom = {"type": "Point", "coordinates": [100.0, 0.0]}
+        resp = client.post(f"/features/{TEST_TABLE}/query/distance", json={"geometry": geom, "distance": 1000})
+        assert resp.status_code == 200
+>       assert any(f["name"] == "Test Feature" for f in resp.json())
+E       assert False
+E        +  where False = any(<generator object test_query_distance.<locals>.<genexpr> at 0x000002489ADA2670>)
+
+app\tests\test_spatial_crud.py:130: AssertionError
+---------------------------- Captured stdout call -----------------------------
+2025-04-19 14:47:23,809 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-04-19 14:47:23,809 INFO sqlalchemy.engine.Engine 
+        SELECT * FROM test_features
+        WHERE ST_DWithin(
+            geometry::geography,
+            ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s), 4326)::geography,
+            %(distance)s
+        )
+    
+2025-04-19 14:47:23,810 INFO sqlalchemy.engine.Engine [generated in 0.00012s] {'geojson': '{"type": "Point", "coordinates": [100.0, 0.0]}', 'distance': 1000.0}
+2025-04-19 14:47:23,819 INFO sqlalchemy.engine.Engine ROLLBACK
+------------------------------ Captured log call ------------------------------
+INFO     sqlalchemy.engine.Engine:base.py:2699 BEGIN (implicit)
+INFO     sqlalchemy.engine.Engine:base.py:1843 
+        SELECT * FROM test_features
+        WHERE ST_DWithin(
+            geometry::geography,
+            ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s), 4326)::geography,
+            %(distance)s
+        )
+    
+INFO     sqlalchemy.engine.Engine:base.py:1843 [generated in 0.00012s] {'geojson': '{"type": "Point", "coordinates": [100.0, 0.0]}', 'distance': 1000.0}
+INFO     sqlalchemy.engine.Engine:base.py:2702 ROLLBACK
+____________________________ test_query_intersects ____________________________
+
+    def test_query_intersects():
+        geom = {"type": "Point", "coordinates": [100.0, 0.0]}
+        resp = client.post(f"/features/{TEST_TABLE}/query/intersects", json={"geometry": geom})
+        assert resp.status_code == 200
+>       assert any(f["name"] == "Test Feature" for f in resp.json())
+E       assert False
+E        +  where False = any(<generator object test_query_intersects.<locals>.<genexpr> at 0x000002489ACF4110>)
+
+app\tests\test_spatial_crud.py:136: AssertionError
+---------------------------- Captured stdout call -----------------------------
+2025-04-19 14:47:23,828 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-04-19 14:47:23,829 INFO sqlalchemy.engine.Engine 
+        SELECT * FROM test_features
+        WHERE ST_Intersects(
+            geometry,
+            ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s), 4326)
+        )
+    
+2025-04-19 14:47:23,829 INFO sqlalchemy.engine.Engine [generated in 0.00011s] {'geojson': '{"type": "Point", "coordinates": [100.0, 0.0]}'}
+2025-04-19 14:47:23,831 INFO sqlalchemy.engine.Engine ROLLBACK
+------------------------------ Captured log call ------------------------------
+INFO     sqlalchemy.engine.Engine:base.py:2699 BEGIN (implicit)
+INFO     sqlalchemy.engine.Engine:base.py:1843 
+        SELECT * FROM test_features
+        WHERE ST_Intersects(
+            geometry,
+            ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s), 4326)
+        )
+    
+INFO     sqlalchemy.engine.Engine:base.py:1843 [generated in 0.00011s] {'geojson': '{"type": "Point", "coordinates": [100.0, 0.0]}'}
+INFO     sqlalchemy.engine.Engine:base.py:2702 ROLLBACK
+-------------------------- Captured stdout teardown ---------------------------
+2025-04-19 14:47:23,838 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-04-19 14:47:23,838 INFO sqlalchemy.engine.Engine DROP TABLE IF EXISTS test_features CASCADE
+2025-04-19 14:47:23,838 INFO sqlalchemy.engine.Engine [generated in 0.00022s] {}
+2025-04-19 14:47:23,841 INFO sqlalchemy.engine.Engine COMMIT
+---------------------------- Captured log teardown ----------------------------
+INFO     sqlalchemy.engine.Engine:base.py:2699 BEGIN (implicit)
+INFO     sqlalchemy.engine.Engine:base.py:1843 DROP TABLE IF EXISTS test_features CASCADE
+INFO     sqlalchemy.engine.Engine:base.py:1843 [generated in 0.00022s] {}
+INFO     sqlalchemy.engine.Engine:base.py:2705 COMMIT
+=========================== short test summary info ===========================
+FAILED app/tests/test_spatial_crud.py::test_query_within - assert False
+FAILED app/tests/test_spatial_crud.py::test_query_distance - assert False
+FAILED app/tests/test_spatial_crud.py::test_query_intersects - assert False
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 3 failures !!!!!!!!!!!!!!!!!!!!!!!!!!
+========================= 3 failed, 9 passed in 1.44s =========================

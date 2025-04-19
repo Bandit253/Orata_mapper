@@ -4,7 +4,7 @@ import Toolbar from './Toolbar';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   FormControl, InputLabel, MenuItem, Select, SelectChangeEvent, Box, Paper, Typography, List, ListItem, ListItemText, IconButton, CircularProgress,
-  Button, Dialog, DialogActions, DialogContent, DialogTitle
+  Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
@@ -75,6 +75,84 @@ interface LayerEntry {
 }
 
 const MapView: React.FC = () => {
+  // Buffer tool dialog state
+  const [bufferDialogOpen, setBufferDialogOpen] = useState(false);
+  const [bufferGeometry, setBufferGeometry] = useState<string>(''); // GeoJSON as string
+  const [bufferDistance, setBufferDistance] = useState<number>(100);
+  const [bufferLoading, setBufferLoading] = useState(false);
+  const [bufferError, setBufferError] = useState<string | null>(null);
+
+  // Open buffer dialog
+  const handleBufferDialogOpen = () => {
+    setBufferDialogOpen(true);
+    setBufferGeometry('');
+    setBufferDistance(100);
+    setBufferError(null);
+  };
+
+  // Close buffer dialog
+  const handleBufferDialogClose = () => {
+    setBufferDialogOpen(false);
+    setBufferGeometry('');
+    setBufferDistance(100);
+    setBufferError(null);
+  };
+
+  // Submit buffer request
+  const handleBufferSubmit = async () => {
+    setBufferLoading(true);
+    setBufferError(null);
+    try {
+      // Parse geometry
+      let geometryObj;
+      try {
+        geometryObj = JSON.parse(bufferGeometry);
+      } catch (e) {
+        setBufferError('Invalid GeoJSON');
+        setBufferLoading(false);
+        return;
+      }
+      // For demo, use first visible layer as table (could be UI selection)
+      const table = layers.find(l => l.visible)?.tableName;
+      if (!table) {
+        setBufferError('No visible layer to buffer');
+        setBufferLoading(false);
+        return;
+      }
+      const response = await axios.post(`/features/${table}/query/buffer`, {
+        geometry: geometryObj,
+        buffer: bufferDistance
+      });
+      // Add result to map as new layer
+      if (response.data && mapRef.current) {
+        const layerId = `${table}_buffer_${Date.now()}`;
+        if (mapRef.current.getSource(layerId)) {
+          mapRef.current.removeLayer(layerId);
+          mapRef.current.removeSource(layerId);
+        }
+        mapRef.current.addSource(layerId, {
+          type: 'geojson',
+          data: { type: 'FeatureCollection', features: response.data.map((f: any) => f.geometry) },
+        });
+        mapRef.current.addLayer({
+          id: layerId,
+          type: 'fill',
+          source: layerId,
+          paint: {
+            'fill-color': '#ff9800',
+            'fill-opacity': 0.4,
+            'fill-outline-color': '#d84315',
+          },
+        });
+      }
+      setBufferLoading(false);
+      setBufferDialogOpen(false);
+    } catch (err: any) {
+      setBufferError(err?.response?.data?.detail || err?.message || 'Buffer query failed');
+      setBufferLoading(false);
+    }
+  };
+
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [basemap, setBasemap] = useState('osm');
@@ -312,7 +390,7 @@ const MapView: React.FC = () => {
       {/* Sidebar for controls */}
       <Box sx={{ width: 340, minWidth: 280, maxWidth: 400, height: '100%', bgcolor: 'background.paper', boxShadow: 2, zIndex: 1200, display: 'flex', flexDirection: 'column', gap: 2, p: 2 }}>
         {/* Toolbar */}
-        <Toolbar onImportClick={handleImportDialogOpen} />
+        <Toolbar onImportClick={handleImportDialogOpen} onBufferClick={handleBufferDialogOpen} />
         {/* Basemap Selector */}
         <Box sx={{ mb: 2 }}>
           <FormControl size="small" fullWidth>
@@ -334,14 +412,17 @@ const MapView: React.FC = () => {
           elevation={1}
           sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}
         >
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-            Table of Contents
-          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', mb: 1, gap: 1 }}>
+            <Toolbar onImportClick={handleImportDialogOpen} onBufferClick={handleBufferDialogOpen} />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Table of Contents
+            </Typography>
+          </Box>
           <List>
-            {layers.map(layer => (
+            {layers.map((layer: LayerEntry) => (
               <ListItem
                 key={layer.tableName}
-                onContextMenu={e => handleContextMenu(e, layer.tableName)}
+                onContextMenu={(e: React.MouseEvent) => handleContextMenu(e, layer.tableName)}
                 sx={{
                   opacity: layer.visible ? 1 : 0.5,
                   cursor: 'context-menu',
@@ -360,7 +441,7 @@ const MapView: React.FC = () => {
                 />
                 <IconButton
                   edge="end"
-                  onClick={e => {
+                  onClick={(e: React.MouseEvent) => {
                     e.stopPropagation();
                     handleLayerToggle(layer.tableName);
                   }}
@@ -387,7 +468,7 @@ const MapView: React.FC = () => {
               onClick={() => contextMenu && handleContextToggleVisibility(contextMenu.tableName!)}
               disabled={!contextMenu}
             >
-              {contextMenu && layers.find(l => l.tableName === contextMenu.tableName)?.visible
+              {contextMenu && layers.find((l: LayerEntry) => l.tableName === contextMenu.tableName)?.visible
                 ? 'Hide Layer'
                 : 'Show Layer'}
             </MenuItem>
@@ -433,8 +514,47 @@ const MapView: React.FC = () => {
           </DialogActions>
         </Dialog>
       </Box>
+      {/* Buffer Tool Dialog */}
+      <Dialog open={bufferDialogOpen} onClose={handleBufferDialogClose}>
+        <DialogTitle>Buffer Tool</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 400 }}>
+          <Typography variant="body2">
+            Enter a GeoJSON geometry and buffer distance (meters):
+          </Typography>
+          <TextField
+            label="Geometry (GeoJSON)"
+            value={bufferGeometry}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBufferGeometry(e.target.value)}
+            multiline
+            minRows={3}
+            fullWidth
+            placeholder='{"type": "Point", "coordinates": [144.9631, -37.8136]}'
+          />
+          <TextField
+            label="Buffer Distance (meters)"
+            type="number"
+            value={bufferDistance}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBufferDistance(Number(e.target.value))}
+            inputProps={{ min: 1 }}
+            fullWidth
+          />
+          {bufferError && <Typography color="error">{bufferError}</Typography>}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleBufferDialogClose} disabled={bufferLoading}>Cancel</Button>
+          <Button onClick={handleBufferSubmit} variant="contained" color="secondary" disabled={bufferLoading}>
+            {bufferLoading ? 'Buffering...' : 'Run Buffer'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
 
 export default MapView;
+
+/**
+ * Buffer tool dialog logic and API integration added to MapView.
+ * - handleBufferDialogOpen/Close: open/close dialog
+ * - handleBufferSubmit: call backend and add buffer result as a layer
+ */

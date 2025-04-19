@@ -51,7 +51,7 @@ class GeometryBase(BaseModel):
         return self
 
 class SpatialBase(BaseModel):
-    name: str
+    name: Optional[str] = None
     description: Optional[str] = None
     geometry: GeometryBase
 

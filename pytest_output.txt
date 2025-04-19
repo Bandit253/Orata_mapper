@@ -1,0 +1,152 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.3, pytest-8.3.5, pluggy-1.5.0 -- D:\_OrataMap\mapper\.env313\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\_OrataMap\mapper
+plugins: anyio-4.9.0
+collecting ... collected 33 items
+
+app/tests/test_spatial_crud.py::test_create_feature 2025-04-19 14:32:28,938 INFO sqlalchemy.engine.Engine select pg_catalog.version()
+2025-04-19 14:32:28,938 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-04-19 14:32:28,940 INFO sqlalchemy.engine.Engine select current_schema()
+2025-04-19 14:32:28,940 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-04-19 14:32:28,941 INFO sqlalchemy.engine.Engine show standard_conforming_strings
+2025-04-19 14:32:28,941 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-04-19 14:32:28,943 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-04-19 14:32:28,943 INFO sqlalchemy.engine.Engine 
+    CREATE TABLE IF NOT EXISTS test_features (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        geometry geometry(Point, 4326) NOT NULL
+    )
+2025-04-19 14:32:28,943 INFO sqlalchemy.engine.Engine [generated in 0.00021s] {}
+2025-04-19 14:32:28,969 INFO sqlalchemy.engine.Engine COMMIT
+FAILED               [  3%]2025-04-19 14:32:29,312 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-04-19 14:32:29,312 INFO sqlalchemy.engine.Engine DROP TABLE IF EXISTS test_features CASCADE
+2025-04-19 14:32:29,312 INFO sqlalchemy.engine.Engine [generated in 0.00023s] {}
+2025-04-19 14:32:29,314 INFO sqlalchemy.engine.Engine COMMIT
+
+
+================================== FAILURES ===================================
+_____________________________ test_create_feature _____________________________
+app\tests\test_spatial_crud.py:43: in test_create_feature
+    resp = client.post(f"/features/{TEST_TABLE}/", json=feature_payload())
+.env313\Lib\site-packages\starlette\testclient.py:538: in post
+    return super().post(
+.env313\Lib\site-packages\httpx\_client.py:1144: in post
+    return self.request(
+.env313\Lib\site-packages\starlette\testclient.py:437: in request
+    return super().request(
+.env313\Lib\site-packages\httpx\_client.py:825: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+.env313\Lib\site-packages\httpx\_client.py:914: in send
+    response = self._send_handling_auth(
+.env313\Lib\site-packages\httpx\_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+.env313\Lib\site-packages\httpx\_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+.env313\Lib\site-packages\httpx\_client.py:1014: in _send_single_request
+    response = transport.handle_request(request)
+.env313\Lib\site-packages\starlette\testclient.py:340: in handle_request
+    raise exc
+.env313\Lib\site-packages\starlette\testclient.py:337: in handle_request
+    portal.call(self.app, scope, receive, send)
+.env313\Lib\site-packages\anyio\from_thread.py:290: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+c:\Python\Python313\Lib\concurrent\futures\_base.py:456: in result
+    return self.__get_result()
+c:\Python\Python313\Lib\concurrent\futures\_base.py:401: in __get_result
+    raise self._exception
+.env313\Lib\site-packages\anyio\from_thread.py:221: in _call_func
+    retval = await retval_or_awaitable
+.env313\Lib\site-packages\fastapi\applications.py:1054: in __call__
+    await super().__call__(scope, receive, send)
+.env313\Lib\site-packages\starlette\applications.py:112: in __call__
+    await self.middleware_stack(scope, receive, send)
+.env313\Lib\site-packages\starlette\middleware\errors.py:187: in __call__
+    raise exc
+.env313\Lib\site-packages\starlette\middleware\errors.py:165: in __call__
+    await self.app(scope, receive, _send)
+.env313\Lib\site-packages\starlette\middleware\exceptions.py:62: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+.env313\Lib\site-packages\starlette\_exception_handler.py:53: in wrapped_app
+    raise exc
+.env313\Lib\site-packages\starlette\_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.env313\Lib\site-packages\starlette\routing.py:714: in __call__
+    await self.middleware_stack(scope, receive, send)
+.env313\Lib\site-packages\starlette\routing.py:734: in app
+    await route.handle(scope, receive, send)
+.env313\Lib\site-packages\starlette\routing.py:288: in handle
+    await self.app(scope, receive, send)
+.env313\Lib\site-packages\starlette\routing.py:76: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+.env313\Lib\site-packages\starlette\_exception_handler.py:53: in wrapped_app
+    raise exc
+.env313\Lib\site-packages\starlette\_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.env313\Lib\site-packages\starlette\routing.py:73: in app
+    response = await f(request)
+.env313\Lib\site-packages\fastapi\routing.py:301: in app
+    raw_response = await run_endpoint_function(
+.env313\Lib\site-packages\fastapi\routing.py:214: in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+.env313\Lib\site-packages\starlette\concurrency.py:37: in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+.env313\Lib\site-packages\anyio\to_thread.py:56: in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+.env313\Lib\site-packages\anyio\_backends\_asyncio.py:2470: in run_sync_in_worker_thread
+    return await future
+.env313\Lib\site-packages\anyio\_backends\_asyncio.py:967: in run
+    result = context.run(func, *args)
+app\api\spatial.py:77: in create_feature
+    db_obj = crud_spatial.create(db, feature, table_name=table_name)
+E   AttributeError: 'CRUDSpatial' object has no attribute 'create'
+---------------------------- Captured stdout setup ----------------------------
+2025-04-19 14:32:28,938 INFO sqlalchemy.engine.Engine select pg_catalog.version()
+2025-04-19 14:32:28,938 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-04-19 14:32:28,940 INFO sqlalchemy.engine.Engine select current_schema()
+2025-04-19 14:32:28,940 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-04-19 14:32:28,941 INFO sqlalchemy.engine.Engine show standard_conforming_strings
+2025-04-19 14:32:28,941 INFO sqlalchemy.engine.Engine [raw sql] {}
+2025-04-19 14:32:28,943 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-04-19 14:32:28,943 INFO sqlalchemy.engine.Engine 
+    CREATE TABLE IF NOT EXISTS test_features (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        geometry geometry(Point, 4326) NOT NULL
+    )
+2025-04-19 14:32:28,943 INFO sqlalchemy.engine.Engine [generated in 0.00021s] {}
+2025-04-19 14:32:28,969 INFO sqlalchemy.engine.Engine COMMIT
+----------------------------- Captured log setup ------------------------------
+INFO     sqlalchemy.engine.Engine:base.py:1843 select pg_catalog.version()
+INFO     sqlalchemy.engine.Engine:base.py:1843 [raw sql] {}
+INFO     sqlalchemy.engine.Engine:base.py:1843 select current_schema()
+INFO     sqlalchemy.engine.Engine:base.py:1843 [raw sql] {}
+INFO     sqlalchemy.engine.Engine:base.py:1843 show standard_conforming_strings
+INFO     sqlalchemy.engine.Engine:base.py:1843 [raw sql] {}
+INFO     sqlalchemy.engine.Engine:base.py:2699 BEGIN (implicit)
+INFO     sqlalchemy.engine.Engine:base.py:1843 
+    CREATE TABLE IF NOT EXISTS test_features (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        geometry geometry(Point, 4326) NOT NULL
+    )
+INFO     sqlalchemy.engine.Engine:base.py:1843 [generated in 0.00021s] {}
+INFO     sqlalchemy.engine.Engine:base.py:2705 COMMIT
+-------------------------- Captured stdout teardown ---------------------------
+2025-04-19 14:32:29,312 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-04-19 14:32:29,312 INFO sqlalchemy.engine.Engine DROP TABLE IF EXISTS test_features CASCADE
+2025-04-19 14:32:29,312 INFO sqlalchemy.engine.Engine [generated in 0.00023s] {}
+2025-04-19 14:32:29,314 INFO sqlalchemy.engine.Engine COMMIT
+---------------------------- Captured log teardown ----------------------------
+INFO     sqlalchemy.engine.Engine:base.py:2699 BEGIN (implicit)
+INFO     sqlalchemy.engine.Engine:base.py:1843 DROP TABLE IF EXISTS test_features CASCADE
+INFO     sqlalchemy.engine.Engine:base.py:1843 [generated in 0.00023s] {}
+INFO     sqlalchemy.engine.Engine:base.py:2705 COMMIT
+=========================== short test summary info ===========================
+FAILED app/tests/test_spatial_crud.py::test_create_feature - AttributeError: ...
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!
+============================== 1 failed in 1.15s ==============================

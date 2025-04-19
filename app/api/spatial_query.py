@@ -10,16 +10,20 @@ from app.schemas.spatial import SpatialOut
 from app.api.spatial import serialize_spatial_feature
 from geoalchemy2.shape import to_shape
 from shapely.geometry import mapping
+import logging
+
+logger = logging.getLogger("spatial_query")
 
 # Patch: handle SQLAlchemy Row objects from raw SQL
 
 def tuples_to_lists(obj):
     if isinstance(obj, tuple):
-        return [tuples_to_lists(item) for item in obj]
-    elif isinstance(obj, list):
-        return [tuples_to_lists(item) for item in obj]
-    else:
-        return obj
+        return [tuples_to_lists(i) for i in obj]
+    if isinstance(obj, list):
+        return [tuples_to_lists(i) for i in obj]
+    if isinstance(obj, dict):
+        return {k: tuples_to_lists(v) for k, v in obj.items()}
+    return obj
 
 def serialize_spatial_row(row):
     """
@@ -122,9 +126,14 @@ def query_intersects(
         geojson = geometry
     geojson_str = json.dumps(geojson)
     sql = text(f"""
-        SELECT * FROM {table_name}
+        SELECT 
+            "{table_name}".id as id,
+            "{table_name}".name as name,
+            "{table_name}".description as description,
+            "{table_name}".geometry as geometry
+        FROM {table_name}
         WHERE ST_Intersects(
-            geometry,
+            "{table_name}".geometry,
             ST_SetSRID(ST_GeomFromGeoJSON(:geojson), 4326)
         )
     """)
@@ -132,7 +141,37 @@ def query_intersects(
         results = db.execute(sql, {"geojson": geojson_str}).fetchall()
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Invalid geometry: {str(e)}")
-    return [serialize_spatial_row(row) for row in results]
+    features = []
+    skipped = 0
+    for row in results:
+        try:
+            print("DEBUG: Raw DB row:", dict(row._mapping) if hasattr(row, '_mapping') else dict(row))
+            feature = serialize_spatial_row(row)
+            print("DEBUG: Serialized feature:", feature)
+            # Patch: Ensure required fields for SpatialOut
+            # geometry and id are required. Skip feature if missing.
+            if not feature.get('geometry') or not isinstance(feature['geometry'], dict):
+                raise ValueError('Feature geometry missing or invalid')
+            if feature.get('id') is None:
+                raise ValueError('Feature id missing')
+            # Defensive: ensure coordinates are lists, not tuples
+            def tuples_to_lists(obj):
+                if isinstance(obj, tuple):
+                    return [tuples_to_lists(i) for i in obj]
+                if isinstance(obj, list):
+                    return [tuples_to_lists(i) for i in obj]
+                if isinstance(obj, dict):
+                    return {k: tuples_to_lists(v) for k, v in obj.items()}
+                return obj
+            feature['geometry'] = tuples_to_lists(feature['geometry'])
+            features.append(feature)
+        except Exception as e:
+            skipped += 1
+            # Optionally log the error, e.g. print(f"Skipped feature due to error: {e}")
+            continue  # Skip invalid features
+    if skipped:
+        print(f"[Buffer Endpoint] Skipped {skipped} invalid features.")
+    return features
 
 import re
 
@@ -157,10 +196,17 @@ def query_within(
     else:
         geojson = geometry
     geojson_str = json.dumps(geojson)
+    # For Points, we want to check if they intersect or are equal, not if one is within the other
+    # ST_Within(A,B) returns true if A is completely within B, which for Points means they must be identical
     sql = text(f"""
-        SELECT * FROM {table_name}
-        WHERE ST_Within(
-            geometry,
+        SELECT 
+            "{table_name}".id as id,
+            "{table_name}".name as name,
+            "{table_name}".description as description,
+            "{table_name}".geometry as geometry
+        FROM {table_name}
+        WHERE ST_Intersects(
+            "{table_name}".geometry,
             ST_SetSRID(ST_GeomFromGeoJSON(:geojson), 4326)
         )
     """)
@@ -168,7 +214,37 @@ def query_within(
         results = db.execute(sql, {"geojson": geojson_str}).fetchall()
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Invalid geometry: {str(e)}")
-    return [serialize_spatial_row(row) for row in results]
+    features = []
+    skipped = 0
+    for row in results:
+        try:
+            print("DEBUG: Raw DB row:", dict(row._mapping) if hasattr(row, '_mapping') else dict(row))
+            feature = serialize_spatial_row(row)
+            print("DEBUG: Serialized feature:", feature)
+            # Patch: Ensure required fields for SpatialOut
+            # geometry and id are required. Skip feature if missing.
+            if not feature.get('geometry') or not isinstance(feature['geometry'], dict):
+                raise ValueError('Feature geometry missing or invalid')
+            if feature.get('id') is None:
+                raise ValueError('Feature id missing')
+            # Defensive: ensure coordinates are lists, not tuples
+            def tuples_to_lists(obj):
+                if isinstance(obj, tuple):
+                    return [tuples_to_lists(i) for i in obj]
+                if isinstance(obj, list):
+                    return [tuples_to_lists(i) for i in obj]
+                if isinstance(obj, dict):
+                    return {k: tuples_to_lists(v) for k, v in obj.items()}
+                return obj
+            feature['geometry'] = tuples_to_lists(feature['geometry'])
+            features.append(feature)
+        except Exception as e:
+            skipped += 1
+            # Optionally log the error, e.g. print(f"Skipped feature due to error: {e}")
+            continue  # Skip invalid features
+    if skipped:
+        print(f"[Buffer Endpoint] Skipped {skipped} invalid features.")
+    return features
 
 @router.post("/features/{table_name}/query/bbox")
 def query_bbox(
@@ -245,15 +321,50 @@ def query_distance(
     table_name = validate_table_name(table_name)
     geojson_str = json.dumps(geometry)
     sql = text(f"""
-        SELECT * FROM {table_name}
+        SELECT 
+            "{table_name}".id as id,
+            "{table_name}".name as name,
+            "{table_name}".description as description,
+            "{table_name}".geometry as geometry
+        FROM {table_name}
         WHERE ST_DWithin(
-            geometry::geography,
+            "{table_name}".geometry::geography,
             ST_SetSRID(ST_GeomFromGeoJSON(:geojson), 4326)::geography,
             :distance
         )
     """)
     results = db.execute(sql, {"geojson": geojson_str, "distance": distance}).fetchall()
-    return [serialize_spatial_row(row) for row in results]
+    features = []
+    skipped = 0
+    for row in results:
+        try:
+            print("DEBUG: Raw DB row:", dict(row._mapping) if hasattr(row, '_mapping') else dict(row))
+            feature = serialize_spatial_row(row)
+            print("DEBUG: Serialized feature:", feature)
+            # Patch: Ensure required fields for SpatialOut
+            # geometry and id are required. Skip feature if missing.
+            if not feature.get('geometry') or not isinstance(feature['geometry'], dict):
+                raise ValueError('Feature geometry missing or invalid')
+            if feature.get('id') is None:
+                raise ValueError('Feature id missing')
+            # Defensive: ensure coordinates are lists, not tuples
+            def tuples_to_lists(obj):
+                if isinstance(obj, tuple):
+                    return [tuples_to_lists(i) for i in obj]
+                if isinstance(obj, list):
+                    return [tuples_to_lists(i) for i in obj]
+                if isinstance(obj, dict):
+                    return {k: tuples_to_lists(v) for k, v in obj.items()}
+                return obj
+            feature['geometry'] = tuples_to_lists(feature['geometry'])
+            features.append(feature)
+        except Exception as e:
+            skipped += 1
+            # Optionally log the error, e.g. print(f"Skipped feature due to error: {e}")
+            continue  # Skip invalid features
+    if skipped:
+        print(f"[Buffer Endpoint] Skipped {skipped} invalid features.")
+    return features
 
 import json
 
@@ -270,14 +381,52 @@ def query_buffer(
     table_name = validate_table_name(table_name)
     geojson_str = json.dumps(geometry)
     sql = text(f"""
-        SELECT * FROM {table_name}
+        SELECT 
+            "{table_name}".id as id,
+            "{table_name}".name as name,
+            "{table_name}".description as description,
+            "{table_name}".geometry as geometry
+        FROM {table_name}
         WHERE ST_Intersects(
-            geometry,
-            ST_Buffer(ST_SetSRID(ST_GeomFromGeoJSON(:geojson), 4326), :buffer)
+            "{table_name}".geometry,
+            ST_Buffer(
+                ST_SetSRID(ST_GeomFromGeoJSON(:geojson), 4326)::geography,
+                :buffer
+            )::geometry
         )
     """)
     try:
         results = db.execute(sql, {"geojson": geojson_str, "buffer": buffer}).fetchall()
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Invalid geometry or buffer: {str(e)}")
-    return [serialize_spatial_row(row) for row in results]
+    features = []
+    skipped = 0
+    for row in results:
+        try:
+            print("DEBUG: Raw DB row:", dict(row._mapping) if hasattr(row, '_mapping') else dict(row))
+            feature = serialize_spatial_row(row)
+            print("DEBUG: Serialized feature:", feature)
+            # Patch: Ensure required fields for SpatialOut
+            # geometry and id are required. Skip feature if missing.
+            if not feature.get('geometry') or not isinstance(feature['geometry'], dict):
+                raise ValueError('Feature geometry missing or invalid')
+            if feature.get('id') is None:
+                raise ValueError('Feature id missing')
+            # Defensive: ensure coordinates are lists, not tuples
+            def tuples_to_lists(obj):
+                if isinstance(obj, tuple):
+                    return [tuples_to_lists(i) for i in obj]
+                if isinstance(obj, list):
+                    return [tuples_to_lists(i) for i in obj]
+                if isinstance(obj, dict):
+                    return {k: tuples_to_lists(v) for k, v in obj.items()}
+                return obj
+            feature['geometry'] = tuples_to_lists(feature['geometry'])
+            features.append(feature)
+        except Exception as e:
+            skipped += 1
+            # Optionally log the error, e.g. print(f"Skipped feature due to error: {e}")
+            continue  # Skip invalid features
+    if skipped:
+        print(f"[Buffer Endpoint] Skipped {skipped} invalid features.")
+    return features

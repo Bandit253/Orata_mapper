@@ -34,7 +34,166 @@ class CRUDSpatial:
             raise HTTPException(status_code=404, detail=f"Table '{table_name}' does not exist.")
         return table
 
-    # ... (existing CRUD methods remain unchanged)
+    def create(self, db: Session, feature: 'SpatialCreate', table_name: str):
+        """
+        Insert a new spatial feature into the specified table.
+
+        Args:
+            db (Session): Database session.
+            feature (SpatialCreate): Feature to insert.
+            table_name (str): Table name.
+
+        Returns:
+            Any: Inserted row as SQLAlchemy Row or ORM object.
+        """
+        self._validate_table_name(table_name)
+        table = self._get_table(db, table_name)
+        # Prepare geometry
+        try:
+            geom_shape = shape(feature.geometry.model_dump())
+            geom_wkb = from_shape(geom_shape, srid=4326)
+        except Exception as e:
+            raise HTTPException(status_code=422, detail=f"Invalid geometry: {e}")
+        # Prepare insert dict
+        insert_dict = {
+            'geometry': geom_wkb
+        }
+        if feature.name is not None:
+            insert_dict['name'] = feature.name
+        if feature.description is not None:
+            insert_dict['description'] = feature.description
+        try:
+            insert_stmt = table.insert().values(**insert_dict).returning(table)
+            result = db.execute(insert_stmt)
+            db.commit()
+            return result.fetchone()
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(status_code=500, detail=f"Database insert failed: {e}")
+
+    def get(self, db: Session, feature_id: int, table_name: str):
+        """
+        Get a spatial feature by ID from the specified table.
+
+        Args:
+            db (Session): Database session.
+            feature_id (int): Feature ID.
+            table_name (str): Table name.
+
+        Returns:
+            Any: Row or ORM object, or None if not found.
+        """
+        self._validate_table_name(table_name)
+        table = self._get_table(db, table_name)
+        try:
+            stmt = table.select().where(table.c.id == feature_id)
+            result = db.execute(stmt)
+            return result.fetchone()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Database select failed: {e}")
+
+    def get_multi(self, db: Session, table_name: str, skip: int = 0, limit: int = 100):
+        """
+        Get multiple spatial features from the specified table.
+
+        Args:
+            db (Session): Database session.
+            table_name (str): Table name.
+            skip (int): Offset.
+            limit (int): Limit.
+
+        Returns:
+            List[Any]: List of rows or ORM objects.
+        """
+        self._validate_table_name(table_name)
+        table = self._get_table(db, table_name)
+        try:
+            stmt = table.select().offset(skip).limit(limit)
+            result = db.execute(stmt)
+            return result.fetchall()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Database select failed: {e}")
+
+    def update(self, db: Session, db_obj: any, feature: 'SpatialUpdate', table_name: str):
+        """
+        Update a spatial feature in the specified table.
+
+        Args:
+            db (Session): Database session.
+            db_obj (Any): Existing row/ORM object.
+            feature (SpatialUpdate): Data to update.
+            table_name (str): Table name.
+
+        Returns:
+            Any: Updated row or ORM object.
+        """
+        import logging
+        logger = logging.getLogger("crud.spatial.update")
+        self._validate_table_name(table_name)
+        table = self._get_table(db, table_name)
+        # If db_obj is a SQLAlchemy Row, convert to dict-like for key access
+        if hasattr(db_obj, "_mapping"):
+            db_obj = db_obj._mapping
+        logger.info(f"Updating feature in table: {table_name}, feature_id: {db_obj['id']}")
+        logger.debug(f"Incoming update data: {feature}")
+        update_dict = {}
+        if feature.name is not None:
+            update_dict['name'] = feature.name
+        if feature.description is not None:
+            update_dict['description'] = feature.description
+        if feature.geometry is not None:
+            try:
+                logger.debug(f"Raw geometry for update: {feature.geometry}")
+                geom_shape = shape(feature.geometry.model_dump())
+                geom_wkb = from_shape(geom_shape, srid=4326)
+                update_dict['geometry'] = geom_wkb
+            except Exception as e:
+                logger.error(f"Invalid geometry in update: {e}")
+                raise HTTPException(status_code=422, detail=f"Invalid geometry: {e}")
+        logger.info(f"Update dict to apply: {update_dict}")
+        if not update_dict:
+            logger.warning("Update called with no fields to update.")
+            raise HTTPException(status_code=400, detail="No fields to update.")
+        try:
+            stmt = (
+                table.update()
+                .where(table.c.id == db_obj['id'])
+                .values(**update_dict)
+                .returning(table)
+            )
+            logger.debug(f"Executing update statement: {stmt}")
+            result = db.execute(stmt)
+            db.commit()
+            logger.info("Update successful.")
+            return result.fetchone()
+        except Exception as e:
+            logger.error(f"Exception during update: {e}", exc_info=True)
+            db.rollback()
+            raise HTTPException(status_code=500, detail=f"Database update failed: {e}")
+
+    def remove(self, db: Session, feature_id: int, table_name: str):
+        """
+        Delete a spatial feature by ID from the specified table.
+
+        Args:
+            db (Session): Database session.
+            feature_id (int): Feature ID.
+            table_name (str): Table name.
+
+        Returns:
+            Any: Deleted row or ORM object, or None if not found.
+        """
+        self._validate_table_name(table_name)
+        table = self._get_table(db, table_name)
+        try:
+            stmt = table.delete().where(table.c.id == feature_id).returning(table)
+            result = db.execute(stmt)
+            db.commit()
+            return result.fetchone()
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(status_code=500, detail=f"Database delete failed: {e}")
+
 
     def import_geopackage_to_table(self, db: Session, gpkg_path: str, table_name: str):
         """

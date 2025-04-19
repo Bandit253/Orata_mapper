@@ -1,0 +1,72 @@
+[
+  {
+    "name": null,
+    "description": null,
+    "geometry": {
+      "type": "Point",
+      "coordinates": [
+        100.0,
+        0.0
+      ]
+    },
+    "id": 13
+  },
+  {
+    "name": null,
+    "description": null,
+    "geometry": {
+      "type": "Point",
+      "coordinates": [
+        101.0,
+        1.0
+      ]
+    },
+    "id": 14
+  },
+  {
+    "name": null,
+    "description": null,
+    "geometry": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          100.0,
+          0.0
+        ],
+        [
+          101.0,
+          1.0
+        ]
+      ]
+    },
+    "id": 15
+  },
+  {
+    "name": null,
+    "description": null,
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            100.0,
+            0.0
+          ],
+          [
+            101.0,
+            0.0
+          ],
+          [
+            101.0,
+            1.0
+          ],
+          [
+            100.0,
+            0.0
+          ]
+        ]
+      ]
+    },
+    "id": 16
+  }
+]
