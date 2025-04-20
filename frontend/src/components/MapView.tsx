@@ -1,15 +1,12 @@
-import React, { useEffect, useRef, useState, DragEvent, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import Toolbar from './Toolbar';
+import BufferDialog from './mapview/BufferDialog';
+import LayerList, { LayerEntry } from './mapview/LayerList';
+import ImportDialog from './mapview/ImportDialog';
+import { fetchAndShowLayer } from './mapview/mapUtils';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import {
-  FormControl, InputLabel, MenuItem, Select, SelectChangeEvent, Box, Paper, Typography, List, ListItem, ListItemText, IconButton, CircularProgress,
-  Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField
-} from '@mui/material';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import DeleteIcon from '@mui/icons-material/Delete';
-import Menu from '@mui/material/Menu';
+import { FormControl, InputLabel, MenuItem, Select, SelectChangeEvent, Box } from '@mui/material';
 import axios from 'axios';
 
 const OSM_STYLE: maplibregl.StyleSpecification = {
@@ -67,43 +64,29 @@ const BASEMAP_OPTIONS = [
 
 const MELBOURNE_CENTER: [number, number] = [144.9631, -37.8136];
 
-interface LayerEntry {
-  tableName: string;
-  visible: boolean;
-  loading: boolean;
-  error?: string;
-}
-
 const MapView: React.FC = () => {
-  // Buffer tool dialog state
+  // Buffer tool dialog state & handlers
   const [bufferDialogOpen, setBufferDialogOpen] = useState(false);
-  const [bufferGeometry, setBufferGeometry] = useState<string>(''); // GeoJSON as string
+  const [bufferGeometry, setBufferGeometry] = useState<string>('');
   const [bufferDistance, setBufferDistance] = useState<number>(100);
   const [bufferLoading, setBufferLoading] = useState(false);
   const [bufferError, setBufferError] = useState<string | null>(null);
-
-  // Open buffer dialog
   const handleBufferDialogOpen = () => {
     setBufferDialogOpen(true);
     setBufferGeometry('');
     setBufferDistance(100);
     setBufferError(null);
   };
-
-  // Close buffer dialog
   const handleBufferDialogClose = () => {
     setBufferDialogOpen(false);
     setBufferGeometry('');
     setBufferDistance(100);
     setBufferError(null);
   };
-
-  // Submit buffer request
   const handleBufferSubmit = async () => {
     setBufferLoading(true);
     setBufferError(null);
     try {
-      // Parse geometry
       let geometryObj;
       try {
         geometryObj = JSON.parse(bufferGeometry);
@@ -112,7 +95,6 @@ const MapView: React.FC = () => {
         setBufferLoading(false);
         return;
       }
-      // For demo, use first visible layer as table (could be UI selection)
       const table = layers.find(l => l.visible)?.tableName;
       if (!table) {
         setBufferError('No visible layer to buffer');
@@ -123,7 +105,6 @@ const MapView: React.FC = () => {
         geometry: geometryObj,
         buffer: bufferDistance
       });
-      // Add result to map as new layer
       if (response.data && mapRef.current) {
         const layerId = `${table}_buffer_${Date.now()}`;
         if (mapRef.current.getSource(layerId)) {
@@ -161,7 +142,6 @@ const MapView: React.FC = () => {
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [uploadError, setUploadError] = useState<string | null>(null);
-
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
     mouseX: number;
@@ -169,10 +149,9 @@ const MapView: React.FC = () => {
     tableName: string | null;
   } | null>(null);
 
-  // Remove layer from map and TOC (frontend only)
+  // Remove layer from map and TOC
   const handleRemoveLayer = (tableName: string) => {
     setLayers((prevLayers) => prevLayers.filter((layer) => layer.tableName !== tableName));
-    // Remove layer from map if visible
     if (mapRef.current) {
       const map = mapRef.current;
       if (map.getSource(tableName)) {
@@ -182,13 +161,11 @@ const MapView: React.FC = () => {
     }
     handleCloseContextMenu();
   };
-
   // Toggle visibility and close menu
   const handleContextToggleVisibility = (tableName: string) => {
     handleLayerToggle(tableName);
     handleCloseContextMenu();
   };
-
   // Context menu handlers
   const handleContextMenu = (event: React.MouseEvent, tableName: string) => {
     event.preventDefault();
@@ -214,21 +191,18 @@ const MapView: React.FC = () => {
         if (response.data && Array.isArray(response.data.tables)) {
           const existingLayers: LayerEntry[] = response.data.tables.map((tableName: string) => ({
             tableName,
-            visible: false, // Start hidden
+            visible: false,
             loading: false,
             error: undefined,
           }));
           setLayers(existingLayers);
         }
       } catch (error) {
-        console.error("Error fetching existing tables:", error);
-        // Optionally show an error message to the user
+        console.error('Error fetching existing tables:', error);
       }
     };
-
     fetchExistingTables();
-  }, []); // Empty dependency array ensures this runs only once on mount
-
+  }, []);
   // Map initialization
   useEffect(() => {
     if (mapContainer.current && !mapRef.current) {
@@ -244,7 +218,6 @@ const MapView: React.FC = () => {
       mapRef.current = null;
     };
   }, []);
-
   // Basemap switching
   useEffect(() => {
     if (mapRef.current) {
@@ -254,55 +227,11 @@ const MapView: React.FC = () => {
       // Re-add all visible layers after style change
       layers.forEach(layer => {
         if (layer.visible) {
-          fetchAndShowLayer(layer.tableName);
+          fetchAndShowLayer(mapRef.current!, layer.tableName, setLayers);
         }
       });
     }
   }, [basemap]);
-
-  // Helper: Fetch features for a table within current bbox (+5%) and add to map
-  const fetchAndShowLayer = async (tableName: string) => {
-    if (!mapRef.current) return;
-    const map = mapRef.current;
-    const bounds = map.getBounds();
-    const expand = (min: number, max: number, pct: number) => {
-      const center = (min + max) / 2;
-      const half = (max - min) / 2 * (1 + pct);
-      return [center - half, center + half];
-    };
-    const [minLng, maxLng] = expand(bounds.getWest(), bounds.getEast(), 0.05);
-    const [minLat, maxLat] = expand(bounds.getSouth(), bounds.getNorth(), 0.05);
-    try {
-      const resp = await axios.post(`/features/${tableName}/query/bbox`, {
-        bbox: [minLng, minLat, maxLng, maxLat],
-      });
-      const geojson = resp.data;
-      // Remove existing source/layer if present
-      if (map.getSource(tableName)) {
-        map.removeLayer(tableName);
-        map.removeSource(tableName);
-      }
-      map.addSource(tableName, {
-        type: 'geojson',
-        data: geojson,
-      });
-      map.addLayer({
-        id: tableName,
-        type: 'circle',
-        source: tableName,
-        paint: {
-          'circle-radius': 6,
-          'circle-color': '#1976d2',
-          'circle-stroke-width': 2,
-          'circle-stroke-color': '#fff',
-        },
-      });
-    } catch (err) {
-      console.error("Failed to fetch features for", tableName, err); // Log error
-      setLayers(currentLayers => currentLayers.map(l => l.tableName === tableName ? { ...l, error: 'Failed to fetch features' } : l));
-    }
-  };
-
   // TOC Layer toggle
   const handleLayerToggle = (tableName: string) => {
     setLayers(layers => layers.map(l =>
@@ -316,74 +245,62 @@ const MapView: React.FC = () => {
           mapRef.current.setLayoutProperty(tableName, 'visibility', 'none');
         }
       } else {
-        fetchAndShowLayer(tableName);
+        fetchAndShowLayer(mapRef.current, tableName, setLayers);
       }
     }
   };
-
-  const handleImportDialogOpen = () => {
-    setImportDialogOpen(true);
-  };
-
+  // Import dialog handlers
+  const handleImportDialogOpen = () => setImportDialogOpen(true);
   const handleImportDialogClose = () => {
     setImportDialogOpen(false);
-    // Reset state on close
     setFileToUpload(null);
     setUploadStatus('idle');
     setUploadError(null);
   };
-
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
       const file = event.target.files[0];
       if (file.name.toLowerCase().endsWith('.gpkg')) {
         setFileToUpload(file);
-        setUploadStatus('idle'); // Reset status if a new file is selected
+        setUploadStatus('idle');
         setUploadError(null);
       } else {
         alert('Only .gpkg files are supported.');
-        setFileToUpload(null); // Clear invalid file
-        event.target.value = ''; // Reset input field
+        setFileToUpload(null);
+        event.target.value = '';
       }
     } else {
       setFileToUpload(null);
     }
   };
-
-  // Renamed from old handleDrop logic
   const handleUpload = async () => {
     if (!fileToUpload) return;
-
     const tableName = fileToUpload.name.replace(/\.gpkg$/i, '');
-    // Add layer entry with loading state immediately
     setLayers(currentLayers => [
       ...currentLayers.filter(l => l.tableName !== tableName),
       { tableName, visible: false, loading: true, error: undefined }
     ]);
-
     setUploadStatus('uploading');
     setUploadError(null);
-
     try {
       const formData = new FormData();
       formData.append('file', fileToUpload);
       await axios.post('/import/geopackage/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      // Success: Update layer status (remove loading), fetch data, update dialog
-      setLayers(currentLayers => currentLayers.map(l => 
+      setLayers(currentLayers => currentLayers.map(l =>
         l.tableName === tableName ? { ...l, loading: false, visible: true } : l
       ));
-      fetchAndShowLayer(tableName); // Fetch data for the newly added layer
+      fetchAndShowLayer(mapRef.current!, tableName, setLayers);
       setUploadStatus('success');
     } catch (err: any) {
-      // Error: Update layer status (remove loading, add error), update dialog
       const errorMsg = err?.response?.data?.detail || err?.message || 'Import failed';
-      setLayers(currentLayers => currentLayers.map(l => 
+      setLayers(currentLayers => currentLayers.map(l =>
         l.tableName === tableName ? { ...l, loading: false, error: errorMsg } : l
       ));
       setUploadStatus('error');
       setUploadError(errorMsg);
     }
   };
+
 
   return (
     <Box sx={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'row' }}>
@@ -407,79 +324,15 @@ const MapView: React.FC = () => {
             </Select>
           </FormControl>
         </Box>
-        {/* TOC */}
-        <Paper
-          elevation={1}
-          sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}
-        >
-          <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', mb: 1, gap: 1 }}>
-            <Toolbar onImportClick={handleImportDialogOpen} onBufferClick={handleBufferDialogOpen} />
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              Table of Contents
-            </Typography>
-          </Box>
-          <List>
-            {layers.map((layer: LayerEntry) => (
-              <ListItem
-                key={layer.tableName}
-                onContextMenu={(e: React.MouseEvent) => handleContextMenu(e, layer.tableName)}
-                sx={{
-                  opacity: layer.visible ? 1 : 0.5,
-                  cursor: 'context-menu',
-                  userSelect: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <ListItemText
-                  primary={layer.tableName}
-                  primaryTypographyProps={{
-                    color: layer.visible ? 'text.primary' : 'text.secondary',
-                    fontWeight: layer.visible ? 500 : 400,
-                  }}
-                />
-                <IconButton
-                  edge="end"
-                  onClick={(e: React.MouseEvent) => {
-                    e.stopPropagation();
-                    handleLayerToggle(layer.tableName);
-                  }}
-                  title={layer.visible ? 'Hide Layer' : 'Show Layer'}
-                >
-                  {layer.visible ? <VisibilityIcon /> : <VisibilityOffIcon />}
-                </IconButton>
-              </ListItem>
-            ))}
-          </List>
-          {/* Context Menu for layers */}
-          <Menu
-            open={contextMenu !== null}
-            onClose={handleCloseContextMenu}
-            anchorReference="anchorPosition"
-            anchorPosition={
-              contextMenu !== null
-                ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
-                : undefined
-            }
-            MenuListProps={{ 'aria-labelledby': 'layer-context-menu' }}
-          >
-            <MenuItem
-              onClick={() => contextMenu && handleContextToggleVisibility(contextMenu.tableName!)}
-              disabled={!contextMenu}
-            >
-              {contextMenu && layers.find((l: LayerEntry) => l.tableName === contextMenu.tableName)?.visible
-                ? 'Hide Layer'
-                : 'Show Layer'}
-            </MenuItem>
-            <MenuItem
-              onClick={() => contextMenu && handleRemoveLayer(contextMenu.tableName!)}
-              disabled={!contextMenu}
-            >
-              Remove from Map
-            </MenuItem>
-          </Menu>
-        </Paper>
+        {/* TOC - LayerList component */}
+        <LayerList
+          layers={layers}
+          contextMenu={contextMenu}
+          onContextMenu={handleContextMenu}
+          onToggleVisibility={handleContextToggleVisibility}
+          onRemoveLayer={handleRemoveLayer}
+          onCloseContextMenu={handleCloseContextMenu}
+        />
       </Box>
       {/* Map Canvas fills the rest of the space */}
       <Box sx={{ flex: 1, height: '100%', position: 'relative' }}>
@@ -487,66 +340,29 @@ const MapView: React.FC = () => {
           ref={mapContainer}
           style={{ width: '100%', height: '100%' }}
         />
-        <Dialog open={importDialogOpen} onClose={handleImportDialogClose} maxWidth="sm" fullWidth>
-          <DialogTitle>Import GeoPackage File</DialogTitle>
-          <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '10px !important' }}>
-            {/* Simple File Input */}
-            <Button component="label" variant="outlined" disabled={uploadStatus === 'uploading'}>
-              Select .gpkg File
-              <input 
-                type="file" 
-                accept=".gpkg"
-                hidden
-                onChange={handleFileChange}
-              />
-            </Button>
-            {fileToUpload && (
-              <Typography variant="body2">Selected: {fileToUpload.name}</Typography>
-            )}
-            {uploadStatus === 'uploading' && <CircularProgress size={24} sx={{ alignSelf: 'center' }} />}
-            {uploadStatus === 'error' && (
-              <Typography color="error">{uploadError}</Typography>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleImportDialogClose} disabled={uploadStatus === 'uploading'}>Cancel</Button>
-            <Button onClick={handleUpload} disabled={!fileToUpload || uploadStatus === 'uploading'} variant="contained">Import</Button>
-          </DialogActions>
-        </Dialog>
+        {/* Import Dialog */}
+        <ImportDialog
+          open={importDialogOpen}
+          fileToUpload={fileToUpload}
+          uploadStatus={uploadStatus}
+          uploadError={uploadError}
+          onFileChange={handleFileChange}
+          onClose={handleImportDialogClose}
+          onUpload={handleUpload}
+        />
+        {/* Buffer Tool Dialog */}
+        <BufferDialog
+          open={bufferDialogOpen}
+          geometry={bufferGeometry}
+          distance={bufferDistance}
+          loading={bufferLoading}
+          error={bufferError}
+          onGeometryChange={setBufferGeometry}
+          onDistanceChange={setBufferDistance}
+          onClose={handleBufferDialogClose}
+          onSubmit={handleBufferSubmit}
+        />
       </Box>
-      {/* Buffer Tool Dialog */}
-      <Dialog open={bufferDialogOpen} onClose={handleBufferDialogClose}>
-        <DialogTitle>Buffer Tool</DialogTitle>
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 400 }}>
-          <Typography variant="body2">
-            Enter a GeoJSON geometry and buffer distance (meters):
-          </Typography>
-          <TextField
-            label="Geometry (GeoJSON)"
-            value={bufferGeometry}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBufferGeometry(e.target.value)}
-            multiline
-            minRows={3}
-            fullWidth
-            placeholder='{"type": "Point", "coordinates": [144.9631, -37.8136]}'
-          />
-          <TextField
-            label="Buffer Distance (meters)"
-            type="number"
-            value={bufferDistance}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBufferDistance(Number(e.target.value))}
-            inputProps={{ min: 1 }}
-            fullWidth
-          />
-          {bufferError && <Typography color="error">{bufferError}</Typography>}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleBufferDialogClose} disabled={bufferLoading}>Cancel</Button>
-          <Button onClick={handleBufferSubmit} variant="contained" color="secondary" disabled={bufferLoading}>
-            {bufferLoading ? 'Buffering...' : 'Run Buffer'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };
