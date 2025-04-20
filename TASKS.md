@@ -33,9 +33,9 @@
 - [ ] Write and pass tests for new endpoints
 
 🗺️ 5. Mapping Website (Frontend)
-- [ ] Set up `frontend/` project (React + Maplibre)
-- [ ] Configure frontend build/dev environment
-- [ ] Implement reusable map component (Maplibre GL JS)
+- [x] Set up `frontend/` project (React + Maplibre)
+- [x] Configure frontend build/dev environment
+- [x] Implement reusable map component (Maplibre GL JS)
 - [ ] API client for FastAPI endpoints (CRUD, queries, table mgmt)
 - [ ] UI for spatial table/feature creation, editing, deletion
 - [ ] UI for querying and visualizing features
@@ -58,3 +58,4 @@
 - [ ] Identify attributes of a feature (feature info popup)
 - [ ] Move the import function to the toolbar
 - [ ] Add user/role management UI (future)
+- [ ] Implement a tool for users to select layers from the database and display them on the map (LayerSelector) [in progress]

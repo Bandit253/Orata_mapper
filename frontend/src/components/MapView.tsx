@@ -3,6 +3,7 @@ import maplibregl from 'maplibre-gl';
 import Toolbar from './Toolbar';
 import BufferDialog from './mapview/BufferDialog';
 import LayerList, { LayerEntry } from './mapview/LayerList';
+import LayerSelector from './mapview/LayerSelector';
 import ImportDialog from './mapview/ImportDialog';
 import { fetchAndShowLayer } from './mapview/mapUtils';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -65,12 +66,65 @@ const BASEMAP_OPTIONS = [
 const MELBOURNE_CENTER: [number, number] = [144.9631, -37.8136];
 
 const MapView: React.FC = () => {
+  // Map and layers refs/state must be declared before any hooks that use them
+  const mapContainer = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const [layers, setLayers] = useState<LayerEntry[]>([]);
+  const [basemap, setBasemap] = useState('osm');
+
   // Buffer tool dialog state & handlers
   const [bufferDialogOpen, setBufferDialogOpen] = useState(false);
   const [bufferGeometry, setBufferGeometry] = useState<string>('');
   const [bufferDistance, setBufferDistance] = useState<number>(100);
   const [bufferLoading, setBufferLoading] = useState(false);
   const [bufferError, setBufferError] = useState<string | null>(null);
+
+  // LayerSelector state: which DB layers are selected for display
+  const [selectedDbLayers, setSelectedDbLayers] = useState<string[]>([]);
+
+  /**
+   * Sync map layers with selectedDbLayers from LayerSelector.
+   * Adds new layers, sets visibility, and fetches features for visible layers.
+   */
+  useEffect(() => {
+    setLayers(prevLayers => {
+      // Add new layers and update visibility
+      const updated: LayerEntry[] = [];
+      const seen = new Set<string>();
+      // Add or update all layers currently in selectedDbLayers
+      selectedDbLayers.forEach(tableName => {
+        const existing = prevLayers.find(l => l.tableName === tableName);
+        if (existing) {
+          updated.push({ ...existing, visible: true });
+        } else {
+          updated.push({ tableName, visible: true, loading: false });
+        }
+        seen.add(tableName);
+      });
+      // Add any layers that are not selected, set visible: false
+      prevLayers.forEach(l => {
+        if (!seen.has(l.tableName)) {
+          updated.push({ ...l, visible: false });
+        }
+      });
+      return updated;
+    });
+  }, [selectedDbLayers]);
+
+  // Fetch and show any layers that just became visible
+  useEffect(() => {
+    if (!mapRef.current) return;
+    layers.forEach(layer => {
+      if (layer.visible && (!mapRef.current!.getSource(layer.tableName))) {
+        fetchAndShowLayer(mapRef.current!, layer.tableName, setLayers);
+      } else if (!layer.visible && mapRef.current!.getSource(layer.tableName)) {
+        // Remove layer from map if it is now hidden
+        mapRef.current!.removeLayer(layer.tableName);
+        mapRef.current!.removeSource(layer.tableName);
+      }
+    });
+  }, [layers, mapRef.current]);
+
   const handleBufferDialogOpen = () => {
     setBufferDialogOpen(true);
     setBufferGeometry('');
@@ -134,10 +188,7 @@ const MapView: React.FC = () => {
     }
   };
 
-  const mapContainer = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
-  const [basemap, setBasemap] = useState('osm');
-  const [layers, setLayers] = useState<LayerEntry[]>([]);
+
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
@@ -324,6 +375,11 @@ const MapView: React.FC = () => {
             </Select>
           </FormControl>
         </Box>
+        {/* LayerSelector tool: allows user to select DB layers to show */}
+        <LayerSelector
+          selectedLayers={selectedDbLayers}
+          onChange={setSelectedDbLayers}
+        />
         {/* TOC - LayerList component */}
         <LayerList
           layers={layers}
@@ -373,4 +429,7 @@ export default MapView;
  * Buffer tool dialog logic and API integration added to MapView.
  * - handleBufferDialogOpen/Close: open/close dialog
  * - handleBufferSubmit: call backend and add buffer result as a layer
+ *
+ * LayerSelector tool is now integrated to allow users to select layers from the database.
+ * When the selection changes, selectedDbLayers is updated and can be used to control which layers are loaded/displayed on the map.
  */
